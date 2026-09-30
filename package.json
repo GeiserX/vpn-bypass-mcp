@@ -1,0 +1,43 @@
+{
+  "name": "vpn-bypass-mcp",
+  "mcpName": "io.github.GeiserX/vpn-bypass-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for VPN Bypass, the macOS menu bar app that routes chosen domains and services around the VPN",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GeiserX/vpn-bypass-mcp.git"
+  },
+  "homepage": "https://github.com/GeiserX/vpn-bypass-mcp",
+  "bugs": "https://github.com/GeiserX/vpn-bypass-mcp/issues",
+  "author": "GeiserX",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "vpn-bypass",
+    "vpn",
+    "split-tunneling",
+    "macos",
+    "routing"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "bin": {
+    "vpn-bypass-mcp": "run.js"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "files": [
+    "run.js",
+    "postinstall.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

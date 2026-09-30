@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  build:
+    # Builds the release archives from .goreleaser.yaml without publishing, so
+    # a broken release config goes red here instead of on the tag.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=publish
+      - name: Archives postinstall.js downloads
+        run: |
+          ls dist
+          for arch in amd64 arm64; do
+            f=$(ls dist/vpn-bypass-mcp_*_darwin_${arch}.tar.gz)
+            tar -tzf "$f" | grep -qx vpn-bypass-mcp
+            grep -q "$(basename "$f")" dist/checksums.txt
+          done
+      - name: npm package contents
+        run: npm pack --dry-run
