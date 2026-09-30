@@ -19,10 +19,13 @@ jobs:
       - name: Tag matches package.json and server.json
         run: |
           v="${GITHUB_REF_NAME#v}"
-          for f in package.json server.json; do
-            got=$(node -p "require('./$f').version")
+          # server.json carries the version twice: its own, and packages[0].version,
+          # the npm version the MCP registry installs.
+          for field in "package.json:.version" "server.json:.version" "server.json:.packages[0].version"; do
+            f="${field%%:*}"
+            got=$(node -p "require('./$f')${field#*:}")
             if [ "$got" != "$v" ]; then
-              echo "::error file=$f::version is $got, the tag says $v"
+              echo "::error file=$f::${field#*:} is $got, the tag says $v"
               exit 1
             fi
           done
@@ -62,4 +65,10 @@ jobs:
           node-version: '24'
           check-latest: true
           registry-url: 'https://registry.npmjs.org'
-      - run: npm publish --loglevel verbose
+      # npm refuses a pre-release version (v0.2.0-rc1) without a dist-tag;
+      # publish those under "next" so "latest" keeps the last stable release.
+      - run: |
+          case "${GITHUB_REF_NAME}" in
+            *-*) npm publish --tag next --loglevel verbose ;;
+            *) npm publish --loglevel verbose ;;
+          esac

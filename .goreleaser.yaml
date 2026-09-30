@@ -6,7 +6,7 @@ release:
     owner: GeiserX
     name: vpn-bypass-mcp
   draft: false
-  prerelease: auto # a tag like v0.2.0-rc1 becomes a pre-release
+  prerelease: auto # a tag like v0.2.0-rc1 becomes a pre-release; release.yml publishes it to npm under the next tag
 
 builds:
   # macOS only: VPN Bypass is a macOS app and the server talks to its local socket.

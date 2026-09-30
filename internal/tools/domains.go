@@ -36,7 +36,7 @@ func domainTools() []Tool {
 		{
 			Def: mcp.NewTool("add_domain",
 				mcp.WithDescription(appLine+"Add a domain to one of its lists. "+
-					"The app cleans the value the way its Settings field does, so a pasted URL becomes its host name. "+
+					"The app trims the value and lower-cases it; give a bare host name, not a URL. "+
 					"The bypass list takes host names only (no \"/\"); the vpnOnly list also takes an IPv4 CIDR such as 10.0.0.0/8 (never /0 or /1). "+
 					"The list is saved before the answer comes back. The kernel routes for the new entry are added in the background, and only while a VPN is connected: "+
 					"read list_active_routes or get_logs afterwards to see them. Fails with already_exists when the entry is on that list already."+needs49),

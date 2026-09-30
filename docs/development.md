@@ -28,7 +28,7 @@ The [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) works 
 
 ## The wire contract
 
-The socket protocol belongs to the app. Its source of truth is in the [VPN Bypass repository](https://github.com/GeiserX/VPN-Bypass): `Sources/VPNBypassCore/CommandRouter.swift` for the commands, arguments and error codes, and `Sources/VPNBypassCore/ControlSocketServer.swift` for the framing (one JSON line each way, at most 64 KiB per request line). `AGENTS.md` in this repository lists the rules a change here has to keep.
+The socket protocol belongs to the app. Its source of truth is in the [VPN Bypass repository](https://github.com/GeiserX/VPN-Bypass): `Sources/VPNBypassCore/CommandRouter.swift` for the Custom-mode commands (`status`, `mode`, `default`, `route.*`, `rule.*`), `Sources/VPNBypassCore/ClassicControl.swift` for the domain, service, active-route, refresh and log commands (4.9.0), both with their arguments and error codes, and `Sources/VPNBypassCore/ControlSocketServer.swift` for the framing (one JSON line each way, at most 64 KiB per request line). `AGENTS.md` in this repository lists the rules a change here has to keep.
 
 ## Release
 

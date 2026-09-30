@@ -36,9 +36,9 @@ func statusTools() []Tool {
 			Def: mcp.NewTool("set_mode",
 				mcp.WithDescription(appLine+"Switch its routing mode. This changes how all of the Mac's traffic is routed: ask the user first. "+modes+" "+
 					"Each mode keeps its own lists, so switching back restores them. When Custom mode has no rules yet, switching to it turns the current lists and enabled services into rules first. "+
-					"The app re-applies its kernel routes after the switch."),
+					"The app re-detects the VPN and re-applies every kernel route after the call, even when the mode is already the one asked for: read status first and skip the call when it matches."),
 				mcp.WithString("mode", mcp.Required(), mcp.Enum("bypass", "vpnOnly", "custom"), mcp.Description("The mode to switch to.")),
-				write(false, true),
+				write(true, false),
 			),
 			build: func(a args) (call, error) {
 				if _, err := a.required("mode"); err != nil {

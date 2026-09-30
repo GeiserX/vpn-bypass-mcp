@@ -66,14 +66,15 @@ func customTools() []Tool {
 		{
 			Def: mcp.NewTool("custom_update_route",
 				mcp.WithDescription(appLine+customLine+"Change fields of an egress route; omitted fields keep their value. "+
+					"An empty user or password clears it; an empty name, host or port is ignored. "+
 					"A common use: point a residential proxy route at another port to change its exit IP. The app re-points the route's live listener."+notKernel),
 				idArg,
 				mcp.WithString("name", mcp.Description("New name.")),
 				mcp.WithString("host", mcp.Description("New proxy host.")),
 				mcp.WithNumber("port", mcp.Description("New proxy port, 1 to 65535."), mcp.Min(1), mcp.Max(65535)),
-				mcp.WithString("user", mcp.Description("New proxy user name.")),
+				mcp.WithString("user", mcp.Description("New proxy user name; an empty string removes it.")),
 				mcp.WithBoolean("enabled", mcp.Description("true to enable, false to disable.")),
-				mcp.WithString("password", mcp.Description(passwordArg)),
+				mcp.WithString("password", mcp.Description(passwordArg+" An empty string removes it.")),
 				write(true, true),
 			),
 			build: func(a args) (call, error) {
@@ -88,7 +89,15 @@ func customTools() []Tool {
 					}
 					c.args["enabled"] = strconv.FormatBool(on)
 				}
+				// An explicit empty user or password clears it: the app stores
+				// "" and then reports hasProxyUser or hasPassword as false.
+				if v, ok := a["user"].(string); ok && v == "" {
+					c.args["user"] = ""
+				}
 				c.secrets, err = a.secrets()
+				if v, ok := a["password"].(string); ok && v == "" && err == nil {
+					c.secrets = map[string]string{"pass": ""}
+				}
 				return c, err
 			},
 		},

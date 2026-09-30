@@ -4,10 +4,8 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/geiserx/vpn-bypass-mcp/client"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -89,7 +87,7 @@ func Handler(c *client.Client, t Tool) server.ToolHandlerFunc {
 		}
 		result, err := c.Call(ctx, call.cmd, call.args, call.secrets)
 		if err != nil {
-			return mcp.NewToolResultError(explain(ctx, c, call.cmd, err)), nil
+			return mcp.NewToolResultError(explain(call.cmd, err)), nil
 		}
 		if len(result) == 0 || string(result) == "null" {
 			return mcp.NewToolResultText("{}"), nil
@@ -98,8 +96,10 @@ func Handler(c *client.Client, t Tool) server.ToolHandlerFunc {
 	}
 }
 
-// explain turns a call error into a message an agent can act on.
-func explain(ctx context.Context, c *client.Client, cmd string, err error) string {
+// explain turns a call error into a message an agent can act on. Only an app
+// older than 4.9.0 answers unknown_command to a verb this server sends, so that
+// code always means "update the app".
+func explain(cmd string, err error) string {
 	var ae *client.AppError
 	if !errors.As(err, &ae) {
 		return err.Error()
@@ -107,30 +107,5 @@ func explain(ctx context.Context, c *client.Client, cmd string, err error) strin
 	if ae.Code != "unknown_command" {
 		return ae.Code + ": " + ae.Message
 	}
-	msg := fmt.Sprintf("this needs VPN Bypass 4.9.0 or newer: the running app does not know the %s command.", cmd)
-	if v := appVersion(ctx, c); v != "" {
-		msg += " The running app is version " + v + "."
-	} else {
-		msg += " The running app does not report its version, which apps before 4.9.0 never do."
-	}
-	return msg + " Update VPN Bypass and try again."
-}
-
-// appVersion asks status for runtime.appVersion; "" when the app does not say.
-func appVersion(ctx context.Context, c *client.Client) string {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	res, err := c.Call(ctx, "status", nil, nil)
-	if err != nil {
-		return ""
-	}
-	var s struct {
-		Runtime struct {
-			AppVersion string `json:"appVersion"`
-		} `json:"runtime"`
-	}
-	if json.Unmarshal(res, &s) != nil {
-		return ""
-	}
-	return s.Runtime.AppVersion
+	return fmt.Sprintf("this needs VPN Bypass 4.9.0 or newer: the running app is older and does not know the %s command. Update VPN Bypass and try again.", cmd)
 }

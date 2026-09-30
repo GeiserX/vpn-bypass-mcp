@@ -13,7 +13,8 @@ type Config struct {
 	// the same variable the vpnb command-line client reads.
 	SocketPath string
 	// ReadOnly registers only the tools that never change the app's state.
-	// Set with VPN_BYPASS_MCP_READ_ONLY=1.
+	// Set with VPN_BYPASS_MCP_READ_ONLY=1; every value except 0, false and no
+	// counts as on.
 	ReadOnly bool
 }
 
@@ -21,7 +22,7 @@ type Config struct {
 func Load() Config {
 	return Config{
 		SocketPath: socketPath(),
-		ReadOnly:   truthy(os.Getenv("VPN_BYPASS_MCP_READ_ONLY")),
+		ReadOnly:   readOnly(os.Getenv("VPN_BYPASS_MCP_READ_ONLY")),
 	}
 }
 
@@ -42,10 +43,12 @@ func socketPath() string {
 	return DefaultSocketPath()
 }
 
-func truthy(v string) bool {
+// readOnly fails closed: any value other than empty, 0, false or no turns
+// read-only mode on, so a typo such as "on" never exposes the write tools.
+func readOnly(v string) bool {
 	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "1", "true", "yes":
-		return true
+	case "", "0", "false", "no":
+		return false
 	}
-	return false
+	return true
 }

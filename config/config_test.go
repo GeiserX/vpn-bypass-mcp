@@ -36,7 +36,7 @@ func TestLoadOverrides(t *testing.T) {
 }
 
 func TestReadOnlyValues(t *testing.T) {
-	for v, want := range map[string]bool{"1": true, "true": true, "YES": true, "0": false, "false": false, "": false, "on": false} {
+	for v, want := range map[string]bool{"1": true, "true": true, "YES": true, "on": true, "y": true, "enabled": true, "0": false, "false": false, "No": false, " ": false, "": false} {
 		t.Setenv("VPN_BYPASS_MCP_READ_ONLY", v)
 		if got := Load().ReadOnly; got != want {
 			t.Errorf("VPN_BYPASS_MCP_READ_ONLY=%q: ReadOnly = %v, want %v", v, got, want)

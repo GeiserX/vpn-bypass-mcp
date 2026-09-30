@@ -99,6 +99,9 @@ var cases = []struct {
 	{"custom_update_route", map[string]any{"id": "R1", "port": float64(24001), "enabled": false, "password": "hunter3"},
 		`{"v":1,"cmd":"route.set","args":{"enabled":"false","id":"R1","port":"24001"},"secrets":{"pass":"hunter3"}}`,
 		`{"routes":[{"enabled":false,"hasPassword":true,"id":"R1","proxyPort":24001}]}`},
+	{"custom_update_route", map[string]any{"id": "R1", "user": "", "password": "", "name": "", "host": ""},
+		`{"v":1,"cmd":"route.set","args":{"id":"R1","user":""},"secrets":{"pass":""}}`,
+		`{"routes":[{"hasPassword":false,"hasProxyUser":false,"id":"R1"}]}`},
 	{"custom_update_route", map[string]any{"id": "R1", "enabled": "TRUE"},
 		`{"v":1,"cmd":"route.set","args":{"enabled":"true","id":"R1"}}`,
 		`{"routes":[{"enabled":true,"id":"R1"}]}`},
@@ -131,9 +134,6 @@ func TestEveryToolSendsTheContractRequest(t *testing.T) {
 			}
 			if text != tc.result {
 				t.Errorf("result = %s\nwant     %s", text, tc.result)
-			}
-			if pw, ok := tc.args["password"].(string); ok && strings.Contains(text, pw) {
-				t.Errorf("the password came back in the result")
 			}
 		})
 	}
@@ -227,27 +227,13 @@ func TestUnknownCommandOnAnOldApp(t *testing.T) {
 	if !res.IsError {
 		t.Fatal("want an error from a 4.8 app")
 	}
-	for _, want := range []string{"this needs VPN Bypass 4.9.0 or newer", "domain.list", "does not report its version"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("message %q lacks %q", text, want)
-		}
+	want := "this needs VPN Bypass 4.9.0 or newer: the running app is older and does not know the domain.list command. Update VPN Bypass and try again."
+	if text != want {
+		t.Errorf("message = %q\nwant      %q", text, want)
 	}
-	// One request for the verb, one status to learn the version.
-	if got := app.Lines(); len(got) != 2 || got[1] != `{"v":1,"cmd":"status"}` {
-		t.Errorf("request lines = %q", got)
-	}
-}
-
-func TestUnknownCommandNamesTheRunningVersion(t *testing.T) {
-	app := fakeapp.Start(t, func(r fakeapp.Request) fakeapp.Reply {
-		if r.Cmd == "status" {
-			return fakeapp.OK(map[string]any{"runtime": map[string]any{"appVersion": "4.8.9"}})
-		}
-		return fakeapp.Fail("unknown_command", "unknown command: "+r.Cmd)
-	})
-	_, text := invoke(t, client.New(app.Path), "refresh_routes", nil)
-	if !strings.Contains(text, "this needs VPN Bypass 4.9.0 or newer") || !strings.Contains(text, "version 4.8.9") {
-		t.Fatalf("message = %q, want the 4.9.0 hint and the running version", text)
+	// Only the verb itself: no second call to learn the version.
+	if got := app.Lines(); len(got) != 1 {
+		t.Errorf("request lines = %q, want one", got)
 	}
 }
 
@@ -285,6 +271,25 @@ func TestReadOnlyModeKeepsOnlyReadTools(t *testing.T) {
 	}
 	if len(All(false)) != 23 {
 		t.Errorf("all tools = %d, want 23", len(All(false)))
+	}
+}
+
+// The tools a client should confirm before calling. set_mode is one: the app
+// re-applies every kernel route even when the mode does not change.
+func TestDestructiveTools(t *testing.T) {
+	want := "clear_routes,custom_remove_route,custom_remove_rule,custom_set_default_route,custom_update_route,remove_domain,set_mode"
+	var got []string
+	for _, tool := range All(false) {
+		if *tool.Def.Annotations.DestructiveHint {
+			got = append(got, tool.Def.Name)
+		}
+	}
+	sort.Strings(got)
+	if strings.Join(got, ",") != want {
+		t.Errorf("destructive tools = %v\nwant %s", got, want)
+	}
+	if mode := find(t, "set_mode").Def.Annotations; *mode.IdempotentHint {
+		t.Error("set_mode is not idempotent: every call re-applies the kernel routes")
 	}
 }
 

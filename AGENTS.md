@@ -4,7 +4,7 @@ MCP server (Go, stdio only, macOS only) for [VPN Bypass](https://github.com/Geis
 
 ## The wire contract
 
-The app owns the contract. Its source of truth is in the VPN-Bypass repo: `Sources/VPNBypassCore/CommandRouter.swift` (verbs, arguments, error codes), `ControlSocketServer.swift` (framing: one JSON line each way, 64 KiB per request line, 30 s server timeout on reads, no timeout on mutations) and `ControlSurface.swift`. Read them before adding or changing a tool.
+The app owns the contract. Its source of truth is in the VPN-Bypass repo: `Sources/VPNBypassCore/CommandRouter.swift` (Custom-mode verbs: `status`, `mode`, `default`, `route.*`, `rule.*`), `ClassicControl.swift` (the 4.9.0 `domain.*`, `service.*`, `routes.*`, `refresh`, `dns.refresh` and `logs` verbs; both hold their arguments and error codes), `ControlSocketServer.swift` (framing: one JSON line each way, 64 KiB per request line, 30 s server timeout on reads, no timeout on mutations) and `ControlSurface.swift`. Read them before adding or changing a tool.
 
 - Every `args` value is a string. Tools convert numbers and booleans in `internal/tools/args.go`.
 - A proxy password travels in `secrets.pass` only. It never appears in a result, an error message or a log line.

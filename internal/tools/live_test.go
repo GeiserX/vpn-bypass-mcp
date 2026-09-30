@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -22,6 +23,11 @@ func TestLiveReadOnly(t *testing.T) {
 		t.Skipf("no VPN Bypass control socket at %s", path)
 	}
 	c := client.New(path)
+	// A crashed or force-quit app leaves the socket file behind with nothing
+	// listening: that is no app, not a failure of this code.
+	if _, err := c.Call(context.Background(), "status", nil, nil); errors.Is(err, client.ErrNotRunning) {
+		t.Skipf("no VPN Bypass answering on %s", path)
+	}
 
 	call := func(tool Tool, a map[string]any) (bool, string) {
 		t.Helper()

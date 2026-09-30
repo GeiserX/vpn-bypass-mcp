@@ -37,7 +37,7 @@ Read tools change nothing and stay registered in read-only mode. The last column
 | `refresh_dns` | | yes | | `dns.refresh` |
 | `custom_list_routes` | yes | | | `route.list` |
 | `custom_add_route` | | | `name`, `type` (`http`, `socks5`, `tailscale`, `vpn`), `host`, `port`, `user`, `password`, `interface`, `product` | `route.add` |
-| `custom_update_route` | | | `id`, then any of `name`, `host`, `port`, `user`, `enabled`, `password` | `route.set` |
+| `custom_update_route` | | | `id`, then any of `name`, `host`, `port`, `user`, `enabled`, `password` (an empty `user` or `password` removes it) | `route.set` |
 | `custom_set_route_enabled` | | | `id`, `enabled` | `route.enable`, `route.disable` |
 | `custom_remove_route` | | | `id` | `route.rm` |
 | `custom_list_rules` | yes | | | `rule.list` |
@@ -45,7 +45,7 @@ Read tools change nothing and stay registered in read-only mode. The last column
 | `custom_remove_rule` | | | `id` | `rule.rm` |
 | `custom_set_default_route` | | | `route_id` | `default` |
 
-Every tool carries the MCP hints `readOnlyHint`, `destructiveHint` and `idempotentHint`, so a client can ask before a destructive call. The destructive ones are `remove_domain`, `clear_routes`, `custom_update_route`, `custom_remove_route`, `custom_remove_rule` and `custom_set_default_route`.
+Every tool carries the MCP hints `readOnlyHint`, `destructiveHint` and `idempotentHint`, so a client can ask before a destructive call. The destructive ones are `set_mode`, `remove_domain`, `clear_routes`, `custom_update_route`, `custom_remove_route`, `custom_remove_rule` and `custom_set_default_route`. `set_mode` is on the list because the app re-applies every kernel route on each call, even when the mode does not change.
 
 ## What happens after a change
 
@@ -56,7 +56,7 @@ The domain and service tools call the same code as the app's buttons. The app sa
 The domain, service, active-route, refresh and log tools use socket commands added in VPN Bypass 4.9.0. An older app answers them with:
 
 ```text
-this needs VPN Bypass 4.9.0 or newer: the running app does not know the domain.list command. The running app does not report its version, which apps before 4.9.0 never do. Update VPN Bypass and try again.
+this needs VPN Bypass 4.9.0 or newer: the running app is older and does not know the domain.list command. Update VPN Bypass and try again.
 ```
 
 ## Errors
