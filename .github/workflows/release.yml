@@ -67,7 +67,18 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       # npm refuses a pre-release version (v0.2.0-rc1) without a dist-tag;
       # publish those under "next" so "latest" keeps the last stable release.
+      #
+      # A version already on npm is skipped, so a failed release can be re-run
+      # after the missing piece is fixed (the first release of a new package is
+      # published by hand, because a trusted publisher can only be added to a
+      # package that exists).
       - run: |
+          v="${GITHUB_REF_NAME#v}"
+          # npm view exits 0 with no output for a missing version of an existing package.
+          if [ -n "$(npm view "vpn-bypass-mcp@$v" version 2>/dev/null)" ]; then
+            echo "vpn-bypass-mcp@$v is already on npm; nothing to publish"
+            exit 0
+          fi
           case "${GITHUB_REF_NAME}" in
             *-*) npm publish --tag next --loglevel verbose ;;
             *) npm publish --loglevel verbose ;;
