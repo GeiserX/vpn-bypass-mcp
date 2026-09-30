@@ -1,0 +1,6 @@
+/dist/
+/bin/
+*.out
+.DS_Store
+node_modules/
+.env
