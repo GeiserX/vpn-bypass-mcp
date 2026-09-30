@@ -25,4 +25,4 @@ Keep them apart in every description and doc. A kernel route is an entry the app
 
 ## Releases
 
-A `v*.*.*` tag runs `.github/workflows/release.yml`: GoReleaser builds darwin amd64 and arm64 archives, then npm publishes the wrapper (`run.js`, `postinstall.js`) with trusted publishing. `postinstall.js` downloads `vpn-bypass-mcp_<version>_darwin_<arch>.tar.gz`, so the archive name in `.goreleaser.yaml` and that script change together. `package.json` and `server.json` carry the version too.
+A `v*.*.*` tag runs `.github/workflows/release.yml`: GoReleaser builds darwin amd64 and arm64 archives, then npm publishes the wrapper (`run.js`, `postinstall.js`) with trusted publishing. `postinstall.js` downloads `vpn-bypass-mcp_<version>_darwin_<arch>.tar.gz`, so the archive name in `.goreleaser.yaml` and that script change together. `package.json` and `server.json` carry the version too, and the `check-version` job refuses a tag they disagree with.

@@ -32,7 +32,7 @@ The socket protocol belongs to the app. Its source of truth is in the [VPN Bypas
 
 ## Release
 
-A `v*.*.*` tag runs `.github/workflows/release.yml`: GoReleaser publishes the darwin amd64 and arm64 archives and `checksums.txt` to a GitHub release, then the npm job publishes the wrapper package with npm trusted publishing. Before tagging, set the new version in `package.json` and `server.json`.
+A `v*.*.*` tag runs `.github/workflows/release.yml`: GoReleaser publishes the darwin amd64 and arm64 archives and `checksums.txt` to a GitHub release, then the npm job publishes the wrapper package with npm trusted publishing. Before tagging, set the new version in `package.json` and `server.json`; the workflow stops before publishing anything when either differs from the tag.
 
 ## Credits
 
