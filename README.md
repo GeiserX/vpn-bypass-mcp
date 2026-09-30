@@ -11,6 +11,10 @@
 
 vpn-bypass-mcp is an MCP server for [VPN Bypass](https://github.com/GeiserX/VPN-Bypass), the macOS menu bar app that decides which traffic uses the VPN and which goes around it. An AI agent uses it to read the app's state and change its routing through the app's local control socket. It runs on macOS only.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/GeiserX/vpn-bypass-mcp/main/docs/images/screenshots/tools.png" alt="MCP Inspector connected to vpn-bypass-mcp: set_mode selected in the tool list, with its description and the three modes it accepts" width="100%">
+</p>
+
 ## Features
 
 - 23 tools, one per app action: status, domain lists, services, routing mode, kernel routes, DNS refresh, the log, and Custom-mode routes and rules.
@@ -41,14 +45,17 @@ Then add the server to your MCP client (Claude Desktop, Cursor, or any client th
 }
 ```
 
-VPN Bypass must be open. The domain, service, active-route, refresh and log tools need VPN Bypass 4.9.0 or newer; `status`, `set_mode` and the Custom-mode tools work with older versions. Claude Code, the release binaries and building from source are in [Getting started](https://github.com/GeiserX/vpn-bypass-mcp/blob/main/docs/getting-started.md).
+VPN Bypass must be open. The domain, service, active-route, refresh and log tools need VPN Bypass 4.9.0 or newer; `status`, `set_mode` and the Custom-mode tools work with older versions. Claude Code, the release binaries and building from source are in [Getting started](https://geiserx.github.io/vpn-bypass-mcp/getting-started/).
 
 ## Documentation
 
-- [Getting started](https://github.com/GeiserX/vpn-bypass-mcp/blob/main/docs/getting-started.md): requirements, npm, release binary, source, first run
-- [Configuration](https://github.com/GeiserX/vpn-bypass-mcp/blob/main/docs/configuration.md): environment variables, read-only mode, timeouts, security
-- [Usage](https://github.com/GeiserX/vpn-bypass-mcp/blob/main/docs/usage.md): modes, the two kinds of route, every tool, errors
-- [Development](https://github.com/GeiserX/vpn-bypass-mcp/blob/main/docs/development.md): build, test, release
+The full documentation is at [geiserx.github.io/vpn-bypass-mcp](https://geiserx.github.io/vpn-bypass-mcp/).
+
+- [Getting started](https://geiserx.github.io/vpn-bypass-mcp/getting-started/): requirements, npm, release binary, source, first run
+- [Configuration](https://geiserx.github.io/vpn-bypass-mcp/configuration/): environment variables, read-only mode, timeouts, security
+- [Usage](https://geiserx.github.io/vpn-bypass-mcp/usage/): modes, the two kinds of route, every tool, errors
+- [Development](https://geiserx.github.io/vpn-bypass-mcp/development/): build, test, release
+- [Related projects](https://geiserx.github.io/vpn-bypass-mcp/related/): the VPN Bypass app, its `vpnb` command line, and where this server is listed
 
 ## Related projects
 
