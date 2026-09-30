@@ -83,3 +83,10 @@ jobs:
             *-*) npm publish --tag next --loglevel verbose ;;
             *) npm publish --loglevel verbose ;;
           esac
+
+  mcp-registry:
+    needs: npm-publish
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/mcp-registry.yml
