@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.GeiserX/vpn-bypass-mcp",
+  "description": "Read and change VPN Bypass (macOS) routing: domain lists, services, modes, kernel routes, logs",
+  "repository": {
+    "url": "https://github.com/GeiserX/vpn-bypass-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "vpn-bypass-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "VPNB_SOCKET",
+          "description": "Path of the VPN Bypass control socket (default ~/Library/Application Support/VPNBypass/control.sock)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VPN_BYPASS_MCP_READ_ONLY",
+          "description": "Set to 1 to register only the tools that change nothing",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

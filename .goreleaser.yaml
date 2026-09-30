@@ -1,0 +1,44 @@
+version: 2
+project_name: vpn-bypass-mcp
+
+release:
+  github:
+    owner: GeiserX
+    name: vpn-bypass-mcp
+  draft: false
+  prerelease: auto # a tag like v0.2.0-rc1 becomes a pre-release; release.yml publishes it to npm under the next tag
+
+builds:
+  # macOS only: VPN Bypass is a macOS app and the server talks to its local socket.
+  - id: bin
+    main: ./cmd/server
+    binary: vpn-bypass-mcp
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+      - -X github.com/geiserx/vpn-bypass-mcp/version.Version={{ .Version }}
+      - -X github.com/geiserx/vpn-bypass-mcp/version.Commit={{ .ShortCommit }}
+      - -X github.com/geiserx/vpn-bypass-mcp/version.Date={{ .Date }}
+
+archives:
+  # postinstall.js downloads vpn-bypass-mcp_<version>_darwin_<arch>.tar.gz; keep this name.
+  - id: dist
+    ids: [bin]
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ .Version }}-snapshot-{{ .ShortCommit }}"
+
+changelog:
+  groups:
+    - title: Features
+      regexp: '^feat'
+    - title: Fixes
+      regexp: '^fix'

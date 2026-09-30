@@ -1,6 +1,8 @@
 /dist/
 /bin/
+/vpn-bypass-mcp
 *.out
+*.test
 .DS_Store
 node_modules/
 .env
