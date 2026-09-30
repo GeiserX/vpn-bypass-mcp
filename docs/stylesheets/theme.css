@@ -1,0 +1,188 @@
+/* docs/stylesheets/theme.css: the vpn-bypass-mcp site in the VPN Bypass palette.
+ *
+ * banner.svg is the VPN Bypass banner design: a navy gradient from #152a4e to
+ * #0b1220, "VPN" in weight 800 white, "Bypass" in weight 200 sky #38bdf8,
+ * "MCP" in a sky outlined box, and the tagline in #b6c2d4. The values are the
+ * ones the VPN Bypass site uses, so the app's site and this one read as one
+ * family. Class prefix: vbm-.
+ */
+:root {
+  --md-primary-fg-color: #0b1220; /* banner background */
+  --md-primary-fg-color--light: #152a4e; /* banner gradient start */
+  --md-primary-fg-color--dark: #060a12;
+  --md-primary-bg-color: #f2f6fa; /* text on the header */
+  --md-primary-bg-color--light: #b6c2d4; /* banner tagline */
+
+  --md-accent-fg-color: #38bdf8; /* banner accent */
+  --md-accent-fg-color--transparent: #38bdf81a;
+}
+
+/* Dark scheme: the page body uses the banner background too, so the header
+   and the page read as one surface. */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0b1220;
+  --md-code-bg-color: #152a4e;
+  --md-typeset-a-color: #38bdf8;
+}
+
+/* Light scheme: #38bdf8 on white is 2.0:1, too faint for body links.
+   #0369a1 is the same hue at 5.9:1. */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #0369a1;
+}
+
+/* Fixed logo size so the mark does not crowd the site name. */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 1.6rem;
+  width: 1.6rem;
+}
+
+/* The site name, drawn as the banner wordmark: "VPN" in weight 800 white,
+ * "Bypass" in weight 200 sky, in the banner's letter spacing (-0.026em), and
+ * in the header an "MCP" box after them.
+ *
+ * site_name stays the plain text "VPN Bypass MCP", so the browser tab, search
+ * and social metadata keep it. Here the text is set to size 0 and the words
+ * are drawn by pseudo-elements. The "/ ''" in content gives the drawn words
+ * an empty alt text, so a screen reader reads the real text once. A browser
+ * without that syntax falls back to the first content line.
+ *
+ * Two places show the name:
+ *   - the header. Material puts the site name in the first .md-header__topic
+ *     and the page title in the second, and swaps them on scroll, so only the
+ *     first one is styled. The topic is a flex row, so its own ::after (the
+ *     MCP box) sits right after the name;
+ *   - the title of the navigation drawer on a narrow screen
+ *     (label[for=__drawer]), where the name is a bare text node and only two
+ *     pseudo-elements exist: there "MCP" follows "Bypass" as plain text.
+ * Both sit on --md-primary-fg-color (#0b1220) in both schemes. */
+.md-header__topic:first-child .md-ellipsis,
+.md-nav--primary > .md-nav__title[for="__drawer"] {
+  --vbm-wordmark-size: 0.9rem;
+  font-size: 0;
+}
+
+.md-header__topic:first-child .md-ellipsis::before,
+.md-header__topic:first-child .md-ellipsis::after,
+.md-nav--primary > .md-nav__title[for="__drawer"]::before,
+.md-nav--primary > .md-nav__title[for="__drawer"]::after {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--vbm-wordmark-size);
+  letter-spacing: -0.026em;
+  /* The parent has font size 0, so its baseline sits higher than the drawn
+   * words' baseline and the line box would grow past the 48 px header. Top
+   * alignment keeps the line box at the header height. */
+  vertical-align: top;
+}
+
+.md-header__topic:first-child .md-ellipsis::before,
+.md-nav--primary > .md-nav__title[for="__drawer"]::before {
+  content: "VPN";
+  content: "VPN" / "";
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.md-header__topic:first-child .md-ellipsis::after {
+  content: "Bypass";
+  content: "Bypass" / "";
+  color: #38bdf8;
+  font-weight: 200;
+  /* The banner gap: 18 px at a cap height of 54 px, about 0.06em. */
+  margin-left: 0.06em;
+}
+
+.md-nav--primary > .md-nav__title[for="__drawer"]::after {
+  content: "Bypass MCP";
+  content: "Bypass MCP" / "";
+  color: #38bdf8;
+  font-weight: 200;
+  margin-left: 0.06em;
+}
+
+/* The MCP box, as the banner draws it: sky outline, rounded, bold sky text. */
+.md-header__topic:first-child::after {
+  content: "MCP";
+  content: "MCP" / "";
+  align-self: center;
+  margin-left: 0.35rem;
+  padding: 0 0.25rem;
+  border: 0.08rem solid #38bdf8;
+  border-radius: 0.25rem;
+  color: #38bdf8;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+/* Keep the mark and the name close, so they read as one unit. */
+.md-header__button.md-logo {
+  padding-right: 0.2rem;
+}
+
+.md-header__title {
+  margin-left: 0.2rem;
+}
+
+/* Buttons. Material paints .md-button in the header colour, which on the dark
+   page is also the page background; outline buttons take the link colour. */
+.md-typeset .md-button {
+  color: var(--md-typeset-a-color);
+  border-color: var(--md-typeset-a-color);
+  border-radius: 0.5rem;
+}
+
+.md-typeset .md-button:focus,
+.md-typeset .md-button:hover {
+  background-color: var(--md-typeset-a-color);
+  border-color: var(--md-typeset-a-color);
+  color: #ffffff;
+}
+
+/* White on the dark scheme's #38bdf8 is 2.0:1; dark text is well above 4.5:1. */
+[data-md-color-scheme="slate"] .md-typeset .md-button:not(.md-button--primary):focus,
+[data-md-color-scheme="slate"] .md-typeset .md-button:not(.md-button--primary):hover {
+  color: #0b1220;
+}
+
+/* Grid cards: the border picks up the accent on hover, like the links. */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid > .card {
+  border-radius: 0.5rem;
+}
+
+.md-typeset .grid.cards > ul > li:focus-within,
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid > .card:focus-within,
+.md-typeset .grid > .card:hover {
+  border-color: #38bdf8;
+}
+
+/* The home page keeps an H1 for search, screen readers and the browser tab.
+   The banner under it already shows the name, so the H1 is hidden visually.
+   Use it as: # VPN Bypass MCP { .vbm-visually-hidden } */
+.md-typeset h1.vbm-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Tool and variable names in tables, such as custom_set_default_route or
+   VPN_BYPASS_MCP_READ_ONLY, must not wrap mid-word. */
+.md-typeset table:not([class]) code {
+  word-break: normal;
+}
+
+/* Screenshots on the home page: rounded like the app's windows. */
+.md-typeset img[src*="images/screenshots/"] {
+  border-radius: 0.4rem;
+}
