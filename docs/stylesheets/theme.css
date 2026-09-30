@@ -26,9 +26,12 @@
 }
 
 /* Light scheme: #38bdf8 on white is 2.0:1, too faint for body links.
-   #0369a1 is the same hue at 5.9:1. */
+   #0369a1 is the same hue at 5.9:1. Material paints hovered and focused
+   links in the accent colour, so the accent takes the same value here. */
 [data-md-color-scheme="default"] {
   --md-typeset-a-color: #0369a1;
+  --md-accent-fg-color: #0369a1;
+  --md-accent-fg-color--transparent: #0369a11a;
 }
 
 /* Fixed logo size so the mark does not crowd the site name. */

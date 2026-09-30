@@ -5,7 +5,7 @@ The server reads two environment variables. It has no config file and no command
 | Variable | Default | What it does |
 |---|---|---|
 | `VPNB_SOCKET` | `~/Library/Application Support/VPNBypass/control.sock` | Path of the VPN Bypass control socket. The `vpnb` command-line client that ships with the app reads the same variable. |
-| `VPN_BYPASS_MCP_READ_ONLY` | unset | Set to `1` to register only the 8 tools that change nothing: `status`, `get_logs`, `list_domains`, `list_services`, `get_service`, `list_active_routes`, `custom_list_routes`, `custom_list_rules`. Any value other than `0`, `false` or `no` turns it on, so a typo never exposes the write tools. |
+| `VPN_BYPASS_MCP_READ_ONLY` | unset | Set to `1` to register only the 8 tools that change nothing: `status`, `get_logs`, `list_domains`, `list_services`, `get_service`, `list_active_routes`, `custom_list_routes`, `custom_list_rules`. An unset or empty value, `0`, `false` or `no` (in any case, with spaces trimmed) leaves it off; any other value turns it on, so a typo never exposes the write tools. |
 
 ## Read-only mode in a client
 
