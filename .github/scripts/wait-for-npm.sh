@@ -9,8 +9,16 @@
 # default 15) sets the pause between checks.
 set -euo pipefail
 
-pkg="$1"
-version="$2"
+pkg="${1:-}"
+version="${2:-}"
+# jq -r prints "null" for a missing key; polling for null@null would only
+# fail 15 minutes later.
+for arg in "$pkg" "$version"; do
+  if [ -z "$arg" ] || [ "$arg" = null ]; then
+    echo "::error::usage: wait-for-npm.sh <package> <version> (got '$pkg' '$version'); check server.json"
+    exit 2
+  fi
+done
 timeout="${WAIT_TIMEOUT:-900}"
 interval="${WAIT_INTERVAL:-15}"
 waited=0
