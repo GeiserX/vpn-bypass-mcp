@@ -25,7 +25,7 @@ Read tools change nothing and stay registered in read-only mode. The last column
 | `get_logs` | yes | yes | `limit` (1-200, default 50), `level` | `logs` |
 | `set_mode` | | | `mode`: `bypass`, `vpnOnly`, `custom` | `mode` |
 | `list_domains` | yes | yes | `list`: `bypass` or `vpnOnly` (both when omitted) | `domain.list` |
-| `add_domain` | | yes | `domain`, `list` (default `bypass`) | `domain.add` |
+| `add_domain` | | yes | `domain` (a host name; on `bypass` also a link, whose host is saved, from VPN Bypass 5.0; on `vpnOnly` also an IPv4 CIDR), `list` (default `bypass`) | `domain.add` |
 | `remove_domain` | | yes | `id` or `domain`, `list` | `domain.rm` |
 | `set_domain_enabled` | | yes | `id` or `domain`, `enabled`, `list` | `domain.enable`, `domain.disable` |
 | `list_services` | yes | yes | | `service.list` |
