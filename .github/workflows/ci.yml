@@ -55,3 +55,5 @@ jobs:
           done
       - name: npm package contents
         run: npm pack --dry-run
+      - name: Wait-for-npm script
+        run: .github/scripts/wait-for-npm_test.sh

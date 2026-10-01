@@ -32,7 +32,7 @@ The socket protocol belongs to the app. Its source of truth is in the [VPN Bypas
 
 ## Release
 
-A `v*.*.*` tag runs `.github/workflows/release.yml`: GoReleaser publishes the darwin amd64 and arm64 archives and `checksums.txt` to a GitHub release, then the npm job publishes the wrapper package with npm trusted publishing. The last job publishes `server.json` to the official MCP Registry, signed in with the workflow's OIDC token. Before tagging, set the new version in `package.json` and `server.json`; the workflow stops before publishing anything when either differs from the tag.
+A `v*.*.*` tag runs `.github/workflows/release.yml`: GoReleaser publishes the darwin amd64 and arm64 archives and `checksums.txt` to a GitHub release, then the npm job publishes the wrapper package with npm trusted publishing. The last job publishes `server.json` to the official MCP Registry, signed in with the workflow's OIDC token. npm can take minutes to serve a version it just accepted, and the registry refuses `server.json` until it does, so that job first runs `.github/scripts/wait-for-npm.sh`, which checks `npm view` every 15 seconds and fails after 15 minutes. Before tagging, set the new version in `package.json` and `server.json`; the workflow stops before publishing anything when either differs from the tag.
 
 ## Credits
 
