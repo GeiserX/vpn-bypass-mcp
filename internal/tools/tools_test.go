@@ -63,6 +63,8 @@ var cases = []struct {
 		`{"domains":[]}`},
 	{"add_domain", map[string]any{"domain": "example.com"}, `{"v":1,"cmd":"domain.add","args":{"domain":"example.com"}}`,
 		`{"domains":[{"domain":"example.com","enabled":true,"id":"6F1C","isCIDR":false,"isWildcard":false,"list":"bypass"}]}`},
+	{"add_domain", map[string]any{"domain": "https://www.example.com/page"}, `{"v":1,"cmd":"domain.add","args":{"domain":"https://www.example.com/page"}}`,
+		`{"domains":[{"domain":"www.example.com","enabled":true,"id":"6F1D","isCIDR":false,"isWildcard":false,"list":"bypass"}]}`},
 	{"add_domain", map[string]any{"domain": "10.0.0.0/8", "list": "vpnOnly"}, `{"v":1,"cmd":"domain.add","args":{"domain":"10.0.0.0/8","list":"vpnOnly"}}`,
 		`{"domains":[{"domain":"10.0.0.0/8","enabled":true,"id":"A1","isCIDR":true,"isWildcard":false,"list":"vpnOnly"}]}`},
 	{"remove_domain", map[string]any{"id": "6F1C"}, `{"v":1,"cmd":"domain.rm","args":{"id":"6F1C"}}`,
@@ -328,6 +330,30 @@ func TestAnnotationsMatchTheVerb(t *testing.T) {
 		}
 		if !strings.Contains(tool.Def.Description, "VPN Bypass is a macOS menu bar app") {
 			t.Errorf("%s: the description must say what the app is", tool.Def.Name)
+		}
+	}
+}
+
+// Since VPN Bypass 5.0 domain.add takes a pasted link on the bypass list and saves its
+// host; only an IP range is refused there. The description must not send an agent
+// back to "host names only".
+func TestAddDomainDescribesLinksAndRanges(t *testing.T) {
+	desc := find(t, "add_domain").Def.Description
+	for _, want := range []string{
+		"On the bypass list a pasted link works",
+		"saves the host",
+		"The bypass list refuses an IP range",
+		"match=cidr",
+		"a link fails as a malformed CIDR",
+		"links work there from 5.0",
+	} {
+		if !strings.Contains(desc, want) {
+			t.Errorf("add_domain description lacks %q", want)
+		}
+	}
+	for _, stale := range []string{"host names only", "not a URL"} {
+		if strings.Contains(desc, stale) {
+			t.Errorf("add_domain description still says %q", stale)
 		}
 	}
 }
