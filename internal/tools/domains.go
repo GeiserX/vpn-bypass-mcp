@@ -7,7 +7,7 @@ func domainTools() []Tool {
 		return append([]mcp.ToolOption{
 			mcp.WithDescription(desc),
 			mcp.WithString("id", mcp.Description("The entry id (a UUID from list_domains). Give id or domain.")),
-			mcp.WithString("domain", mcp.Description("The domain or CIDR as listed. Give id or domain.")),
+			mcp.WithString("domain", mcp.Description("The domain or CIDR as listed: for an entry added from a link, the saved host (www.example.com), not the link. Give id or domain.")),
 			mcp.WithString("list", mcp.Description(listArg), mcp.Enum("bypass", "vpnOnly")),
 		}, extra...)
 	}
@@ -36,11 +36,14 @@ func domainTools() []Tool {
 		{
 			Def: mcp.NewTool("add_domain",
 				mcp.WithDescription(appLine+"Add a domain to one of its lists. "+
-					"The app trims the value and lower-cases it; give a bare host name, not a URL. "+
-					"The bypass list takes host names only (no \"/\"); the vpnOnly list also takes an IPv4 CIDR such as 10.0.0.0/8 (never /0 or /1). "+
+					"The app trims the value and lower-cases it. "+
+					"On the bypass list a pasted link works: the app drops the scheme, user, port, path and query and saves the host (https://www.example.com/page saves www.example.com). "+
+					"The bypass list refuses an IP range such as 10.0.0.0/8; to send a range around the VPN, use custom_add_rule with match=cidr and the Direct route, in Custom mode. "+
+					"The vpnOnly list takes a bare host name or an IPv4 CIDR such as 10.0.0.0/8 (never /0 or /1), and there any value with a \"/\" must be a CIDR, so a link fails as a malformed CIDR. "+
+					"VPN Bypass 4.9 refuses any \"/\" on the bypass list; links work there from 5.0. "+
 					"The list is saved before the answer comes back. The kernel routes for the new entry are added in the background, and only while a VPN is connected: "+
 					"read list_active_routes or get_logs afterwards to see them. Fails with already_exists when the entry is on that list already."+needs49),
-				mcp.WithString("domain", mcp.Required(), mcp.Description("The host name (example.com), or on the vpnOnly list a CIDR.")),
+				mcp.WithString("domain", mcp.Required(), mcp.Description("The host name (example.com). On the bypass list also a link to it; on the vpnOnly list also a CIDR.")),
 				mcp.WithString("list", mcp.Description(listArg+" Default bypass."), mcp.Enum("bypass", "vpnOnly")),
 				write(false, true),
 			),
