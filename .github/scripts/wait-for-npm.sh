@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Usage: wait-for-npm.sh <package> <version>
 #
-# Waits until npm serves <package>@<version>. npm accepts a publish with a 202
-# and can take minutes to serve the new version (about four for v0.1.1), and
-# the MCP Registry refuses server.json with a 404 until it does.
+# Waits until npm serves https://registry.npmjs.org/<package>/<version>, the
+# version document the MCP Registry fetches to validate server.json. npm
+# accepts a publish with a 202 and can take minutes to serve the new version
+# (about four for v0.1.1), and the registry refuses server.json with a 404
+# until it does.
 #
 # WAIT_TIMEOUT (seconds, default 900) caps the wait; WAIT_INTERVAL (seconds,
 # default 15) sets the pause between checks.
@@ -24,10 +26,12 @@ interval="${WAIT_INTERVAL:-15}"
 waited=0
 
 while :; do
-  # A version npm does not serve yet prints nothing on stdout: npm 10 exits 0,
-  # npm 11 exits 1 with E404. Both mean wait.
-  got=$(npm view "$pkg@$version" version 2>/dev/null || true)
-  if [ -n "$got" ]; then
+  # The same URL and Accept header as the registry's validator. The package
+  # document that `npm view` reads is cached apart from it, so its answer
+  # proves nothing about this one.
+  got=$(curl -fsS -H 'Accept: application/json' "https://registry.npmjs.org/$pkg/$version" 2>/dev/null \
+    | jq -r .version 2>/dev/null || true)
+  if [ "$got" = "$version" ]; then
     echo "npm serves $pkg@$version (waited ${waited}s)"
     exit 0
   fi
