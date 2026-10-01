@@ -357,3 +357,17 @@ func TestAddDomainDescribesLinksAndRanges(t *testing.T) {
 		}
 	}
 }
+
+// add_domain saves only the host of a link, and the app refuses a "/" without a scheme
+// as a malformed CIDR on remove and enable, so the target arg must ask for the saved host.
+func TestTargetDomainAsksForTheSavedHost(t *testing.T) {
+	for _, name := range []string{"remove_domain", "set_domain_enabled"} {
+		prop, ok := find(t, name).Def.InputSchema.Properties["domain"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s: no domain property", name)
+		}
+		if desc, _ := prop["description"].(string); !strings.Contains(desc, "the saved host") || !strings.Contains(desc, "not the link") {
+			t.Errorf("%s: domain description %q does not ask for the saved host", name, desc)
+		}
+	}
+}

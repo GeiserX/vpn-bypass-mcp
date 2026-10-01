@@ -7,7 +7,7 @@ func domainTools() []Tool {
 		return append([]mcp.ToolOption{
 			mcp.WithDescription(desc),
 			mcp.WithString("id", mcp.Description("The entry id (a UUID from list_domains). Give id or domain.")),
-			mcp.WithString("domain", mcp.Description("The domain or CIDR as listed. Give id or domain.")),
+			mcp.WithString("domain", mcp.Description("The domain or CIDR as listed: for an entry added from a link, the saved host (www.example.com), not the link. Give id or domain.")),
 			mcp.WithString("list", mcp.Description(listArg), mcp.Enum("bypass", "vpnOnly")),
 		}, extra...)
 	}

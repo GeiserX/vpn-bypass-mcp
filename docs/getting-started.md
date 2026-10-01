@@ -37,8 +37,8 @@ claude mcp add vpn-bypass -- npx -y vpn-bypass-mcp
 Each [release](https://github.com/GeiserX/vpn-bypass-mcp/releases) has `vpn-bypass-mcp_<version>_darwin_arm64.tar.gz` (Apple silicon) and `..._darwin_amd64.tar.gz` (Intel):
 
 ```sh
-curl -LO https://github.com/GeiserX/vpn-bypass-mcp/releases/download/v0.1.0/vpn-bypass-mcp_0.1.0_darwin_arm64.tar.gz
-tar -xzf vpn-bypass-mcp_0.1.0_darwin_arm64.tar.gz vpn-bypass-mcp
+curl -LO https://github.com/GeiserX/vpn-bypass-mcp/releases/download/v0.1.1/vpn-bypass-mcp_0.1.1_darwin_arm64.tar.gz
+tar -xzf vpn-bypass-mcp_0.1.1_darwin_arm64.tar.gz vpn-bypass-mcp
 ./vpn-bypass-mcp --version
 ```
 
