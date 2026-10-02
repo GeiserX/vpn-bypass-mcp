@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "vpn_bypass_mcp",
+  "project_id": "cfca3f06-9108-429c-ad43-c5a1d543c472"
+}
