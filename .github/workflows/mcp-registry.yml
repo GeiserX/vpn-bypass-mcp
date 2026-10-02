@@ -17,6 +17,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # The npm wait below gives up after 15 minutes; this bounds everything else.
+    timeout-minutes: 25
     permissions:
       contents: read
       id-token: write
@@ -30,5 +32,12 @@ jobs:
         run: |
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" \
             | tar xz mcp-publisher
+      # npm can take minutes to serve a version it just accepted, and until it
+      # does the registry refuses server.json with a 404.
+      - name: Wait until npm serves the version in server.json
+        run: |
+          .github/scripts/wait-for-npm.sh \
+            "$(jq -r '.packages[0].identifier' server.json)" \
+            "$(jq -r '.packages[0].version' server.json)"
       - run: ./mcp-publisher login github-oidc
       - run: ./mcp-publisher publish
