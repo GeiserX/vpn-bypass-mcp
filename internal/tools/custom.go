@@ -28,28 +28,32 @@ func customTools() []Tool {
 		{
 			ReadOnly: true,
 			Def: mcp.NewTool("custom_list_routes",
+				mcp.WithToolTitle("List Custom-mode routes"),
 				mcp.WithDescription(appLine+customLine+"List the egress routes: id, name, egress, enabled, proxyHost, proxyPort, hasProxyUser, hasPassword, tailscaleExitNode, vpnSelector, and listenerPort (the live local port of a proxy route). "+
 					"Credentials are never returned; hasProxyUser and hasPassword say whether one is set. "+egressTypes+notKernel),
 				read(),
+				output("routes"),
 			),
 			build: simple("route.list"),
 		},
 		{
 			Def: mcp.NewTool("custom_add_route",
-				mcp.WithDescription(appLine+customLine+"Add an egress route. "+
+				mcp.WithToolTitle("Add a Custom-mode route"),
+				mcp.WithDescription(appLine+customLine+"Add an egress route. Ask the user first, and only use a proxy host the user gave you: traffic sent to it can be read by whoever runs it. "+
 					"type http or socks5: a proxy at host:port, with optional user and password. "+
 					"type vpn: a VPN route; interface (such as utun4) pins one tunnel and product is its label (such as WireGuard), which still matches after the utun number changes. "+
 					"type tailscale: a Tailscale route; this tool has no argument for the exit node, so pick it in the app. "+
 					"Direct and detected VPN routes exist already. Every call adds a new route, even with the same name. The new route carries no traffic until a rule or the default points at it."+notKernel),
 				mcp.WithString("name", mcp.Required(), mcp.Description("A name for the route.")),
 				mcp.WithString("type", mcp.Enum("http", "socks5", "tailscale", "vpn"), mcp.Description("The egress type. Default http.")),
-				mcp.WithString("host", mcp.Description("Proxy host (http and socks5).")),
-				mcp.WithNumber("port", mcp.Description("Proxy port, 1 to 65535 (http and socks5)."), mcp.Min(1), mcp.Max(65535)),
+				mcp.WithString("host", mcp.Description("Proxy host name or IP address, such as proxy.example.net (http and socks5).")),
+				mcp.WithInteger("port", mcp.Description("Proxy port, 1 to 65535, such as 1080 (http and socks5)."), mcp.Min(1), mcp.Max(65535)),
 				mcp.WithString("user", mcp.Description("Proxy user name.")),
 				mcp.WithString("password", mcp.Description(passwordArg)),
 				mcp.WithString("interface", mcp.Description("type vpn only: the tunnel interface to pin, such as utun4.")),
 				mcp.WithString("product", mcp.Description("type vpn only: the tunnel's label, such as WireGuard.")),
-				write(false, false),
+				write(true, false),
+				external(),
 			),
 			build: func(a args) (call, error) {
 				if _, err := a.required("name"); err != nil {
@@ -65,17 +69,19 @@ func customTools() []Tool {
 		},
 		{
 			Def: mcp.NewTool("custom_update_route",
+				mcp.WithToolTitle("Change a Custom-mode route"),
 				mcp.WithDescription(appLine+customLine+"Change fields of an egress route; omitted fields keep their value. "+
 					"An empty user or password clears it; an empty name, host or port is ignored. "+
 					"A common use: point a residential proxy route at another port to change its exit IP. The app re-points the route's live listener."+notKernel),
 				idArg,
 				mcp.WithString("name", mcp.Description("New name.")),
 				mcp.WithString("host", mcp.Description("New proxy host.")),
-				mcp.WithNumber("port", mcp.Description("New proxy port, 1 to 65535."), mcp.Min(1), mcp.Max(65535)),
+				mcp.WithInteger("port", mcp.Description("New proxy port, 1 to 65535."), mcp.Min(1), mcp.Max(65535)),
 				mcp.WithString("user", mcp.Description("New proxy user name; an empty string removes it.")),
 				mcp.WithBoolean("enabled", mcp.Description("true to enable, false to disable.")),
 				mcp.WithString("password", mcp.Description(passwordArg+" An empty string removes it.")),
 				write(true, true),
+				external(),
 			),
 			build: func(a args) (call, error) {
 				c, err := requireID("route.set", "name", "name", "host", "host", "port", "port", "user", "user", "enabled", "enabled")(a)
@@ -103,10 +109,11 @@ func customTools() []Tool {
 		},
 		{
 			Def: mcp.NewTool("custom_set_route_enabled",
-				mcp.WithDescription(appLine+customLine+"Turn one egress route on or off."+notKernel),
+				mcp.WithToolTitle("Turn a Custom-mode route on or off"),
+				mcp.WithDescription(appLine+customLine+"Turn one egress route on or off; its rules then send traffic elsewhere or back to it."+notKernel),
 				idArg,
 				mcp.WithBoolean("enabled", mcp.Required(), mcp.Description("true to enable, false to disable.")),
-				write(false, true),
+				write(true, true),
 			),
 			build: func(a args) (call, error) {
 				on, err := a.requiredBool("enabled")
@@ -122,6 +129,7 @@ func customTools() []Tool {
 		},
 		{
 			Def: mcp.NewTool("custom_remove_route",
+				mcp.WithToolTitle("Remove a Custom-mode route"),
 				mcp.WithDescription(appLine+customLine+"Remove an egress route, every rule that points at it, and the default setting if it was the default. Ask the user first."+notKernel),
 				idArg,
 				write(true, true),
@@ -131,22 +139,25 @@ func customTools() []Tool {
 		{
 			ReadOnly: true,
 			Def: mcp.NewTool("custom_list_rules",
+				mcp.WithToolTitle("List Custom-mode rules"),
 				mcp.WithDescription(appLine+customLine+"List the rules in the order they are checked (first match wins): id, matchType, pattern, routeId, enabled, order. "+
 					"Traffic no rule matches uses the default route (status result.defaultRouteId)."),
 				read(),
+				output("rules"),
 			),
 			build: simple("rule.list"),
 		},
 		{
 			Def: mcp.NewTool("custom_add_rule",
+				mcp.WithToolTitle("Add a Custom-mode rule"),
 				mcp.WithDescription(appLine+customLine+"Add a rule at the end of the list, so it is checked after the existing ones. "+
 					"match: domain = one exact host name; suffix = a domain and its subdomains; ip = one IPv4 address; cidr = an IPv4 range (never /0 or /1); "+
 					"service = a service id from list_services; process = a process name. suffix and process rules install no kernel routes. "+
 					"Every call adds a new rule."),
 				mcp.WithString("match", mcp.Required(), mcp.Enum("domain", "suffix", "ip", "cidr", "service", "process"), mcp.Description("What the pattern is.")),
-				mcp.WithString("pattern", mcp.Required(), mcp.Description("The value to match.")),
+				mcp.WithString("pattern", mcp.Required(), mcp.Description("The value to match, as match says: www.example.com (domain), example.com (suffix), 93.184.216.34 (ip), 10.0.0.0/8 (cidr), netflix (service), Safari (process).")),
 				mcp.WithString("route_id", mcp.Required(), mcp.Description("The egress route id to send matching traffic to (from custom_list_routes).")),
-				write(false, false),
+				write(true, false),
 			),
 			build: func(a args) (call, error) {
 				for _, k := range []string{"match", "pattern", "route_id"} {
@@ -159,7 +170,8 @@ func customTools() []Tool {
 		},
 		{
 			Def: mcp.NewTool("custom_remove_rule",
-				mcp.WithDescription(appLine+customLine+"Remove one rule."),
+				mcp.WithToolTitle("Remove a Custom-mode rule"),
+				mcp.WithDescription(appLine+customLine+"Remove one rule; the traffic it matched falls to the next matching rule or the default route. Ask the user first."),
 				mcp.WithString("id", mcp.Required(), mcp.Description("The rule id (a UUID from custom_list_rules).")),
 				write(true, true),
 			),
@@ -167,7 +179,8 @@ func customTools() []Tool {
 		},
 		{
 			Def: mcp.NewTool("custom_set_default_route",
-				mcp.WithDescription(appLine+customLine+"Set the egress route that traffic no rule matches uses."),
+				mcp.WithToolTitle("Set the Custom-mode default route"),
+				mcp.WithDescription(appLine+customLine+"Set the egress route that traffic no rule matches uses. This moves most of the Mac's traffic in Custom mode: ask the user first."),
 				mcp.WithString("route_id", mcp.Required(), mcp.Description("The egress route id (from custom_list_routes).")),
 				write(true, true),
 			),

@@ -61,7 +61,8 @@ Each tool has a description written for a model that has never seen the app, and
 
 - 8 tools only read: `status`, `get_logs`, `list_domains`, `list_services`, `get_service`, `list_active_routes`, `custom_list_routes`, `custom_list_rules`. The other 15 change something: a list, a service, a route, a rule or the mode.
 - `VPN_BYPASS_MCP_READ_ONLY=1` registers only the 8 read tools. An unset or empty value, `0`, `false` or `no` (in any case, with spaces trimmed) leaves it off; any other value turns it on, so a typo never exposes the write tools. See [Configuration](configuration.md).
-- Every tool carries `readOnlyHint`, `destructiveHint` and `idempotentHint`, so a client can ask you before a destructive call such as `set_mode`, `remove_domain` or `clear_routes`.
+- Every tool carries all four MCP hints. Every tool that changes where traffic goes is destructive, adds included, so a client can ask you before `add_domain`, `custom_add_route`, `set_mode` or `clear_routes`.
+- The server speaks MCP 2026-07-28 and every earlier revision down to 2024-11-05 from the same binary.
 
 ## How it runs
 

@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -138,9 +139,13 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 		}
 	}
 
+	// Error messages reach the model, so they name the socket by its file name
+	// only: the full path holds the macOS user name. The server's stderr start
+	// line still logs the full path for the user.
 	if len(c.SocketPath) > maxSocketPath {
-		return nil, fmt.Errorf("the socket path %s is too long: %d bytes, and macOS allows at most %d (check VPNB_SOCKET)", c.SocketPath, len(c.SocketPath), maxSocketPath)
+		return nil, fmt.Errorf("the control socket path is too long: %d bytes, and macOS allows at most %d (check VPNB_SOCKET)", len(c.SocketPath), maxSocketPath)
 	}
+	sockName := filepath.Base(c.SocketPath)
 
 	mutating := IsMutating(cmd)
 	timeout := c.ReadTimeout
@@ -155,12 +160,12 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 	conn, err := d.DialContext(dialCtx, "unix", c.SocketPath)
 	if err != nil {
 		if errors.Is(err, syscall.ENOENT) || errors.Is(err, syscall.ECONNREFUSED) {
-			return nil, fmt.Errorf("%w (nothing is listening on %s)", ErrNotRunning, c.SocketPath)
+			return nil, fmt.Errorf("%w (nothing is listening on its control socket, %s)", ErrNotRunning, sockName)
 		}
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, fmt.Errorf("connect to the VPN Bypass control socket %s: %w", c.SocketPath, err)
+		return nil, fmt.Errorf("connect to the VPN Bypass control socket %s: %w", sockName, withoutAddr(err))
 	}
 	defer conn.Close()
 
@@ -183,7 +188,7 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 	}
 
 	if _, err := conn.Write(append(line, '\n')); err != nil {
-		return nil, fail(fmt.Errorf("send %s to VPN Bypass: %w", cmd, err))
+		return nil, fail(fmt.Errorf("send %s to VPN Bypass: %w", cmd, withoutAddr(err)))
 	}
 
 	reply, err := bufio.NewReader(io.LimitReader(conn, maxResponseLine+1)).ReadBytes('\n')
@@ -194,7 +199,7 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 		case errors.Is(err, io.EOF):
 			return nil, fmt.Errorf("VPN Bypass closed the connection without a complete answer to %s", cmd)
 		default:
-			return nil, fail(fmt.Errorf("read the answer to %s: %w", cmd, err))
+			return nil, fail(fmt.Errorf("read the answer to %s: %w", cmd, withoutAddr(err)))
 		}
 	}
 
@@ -209,4 +214,16 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 		return nil, resp.Error
 	}
 	return resp.Result, nil
+}
+
+// withoutAddr drops the socket address a *net.OpError prints ("dial unix
+// /Users/<name>/Library/...: connect: permission denied"), keeping its cause,
+// because the message reaches the model. A timeout stays recognisable: the
+// cause is os.ErrDeadlineExceeded, which is a net.Error with Timeout() true.
+func withoutAddr(err error) error {
+	var oe *net.OpError
+	if errors.As(err, &oe) && oe.Err != nil {
+		return oe.Err
+	}
+	return err
 }

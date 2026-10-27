@@ -15,7 +15,17 @@ import (
 	"github.com/geiserx/vpn-bypass-mcp/config"
 	"github.com/geiserx/vpn-bypass-mcp/internal/tools"
 	"github.com/geiserx/vpn-bypass-mcp/version"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+)
+
+const (
+	websiteURL = "https://geiserx.github.io/vpn-bypass-mcp/"
+	iconURL    = "https://raw.githubusercontent.com/GeiserX/vpn-bypass-mcp/main/docs/images/icon.svg"
+	// listTTL is how long a 2026-07-28 client may reuse tools/list and
+	// server/discover. The tool set is fixed for the life of the process, but
+	// it depends on this user's VPN_BYPASS_MCP_READ_ONLY, so the scope is private.
+	listTTL = 60 * 60 * 1000
 )
 
 const usage = `vpn-bypass-mcp %s
@@ -26,19 +36,30 @@ client starts it. It reaches the app through the app's control socket.
 Environment:
   VPNB_SOCKET                 control socket path (default:
                               ~/Library/Application Support/VPNBypass/control.sock)
-  VPN_BYPASS_MCP_READ_ONLY=1  register only the tools that change nothing
+  VPN_BYPASS_MCP_READ_ONLY=1  register only the tools (and the prompt) that
+                              change nothing
+
+Protocol: MCP 2026-07-28 (server/discover) and every earlier revision down to
+2024-11-05 (initialize), from the same binary.
 `
 
-// newServer builds the MCP server with its tools.
+// newServer builds the MCP server with its tools and prompts, and returns how
+// many tools it registered.
 func newServer(cfg config.Config) (*server.MCPServer, int) {
 	s := server.NewMCPServer(
 		"vpn-bypass-mcp",
 		version.Version,
+		server.WithTitle("VPN Bypass"),
+		server.WithDescription("Read and change the routing of VPN Bypass, the macOS menu bar app that decides which traffic uses the VPN."),
+		server.WithWebsiteURL(websiteURL),
+		server.WithIcons(mcp.Icon{Src: iconURL, MIMEType: "image/svg+xml", Sizes: []string{"any"}}),
 		server.WithToolCapabilities(false),
 		server.WithInstructions(tools.Instructions),
+		server.WithCacheHints(listTTL, mcp.CacheScopePrivate),
 		server.WithRecovery(),
 	)
 	n := tools.Register(s, client.New(cfg.SocketPath), cfg.ReadOnly)
+	tools.RegisterPrompts(s, cfg.ReadOnly)
 	return s, n
 }
 
