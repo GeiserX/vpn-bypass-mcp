@@ -7,15 +7,18 @@ func kernelTools() []Tool {
 		{
 			ReadOnly: true,
 			Def: mcp.NewTool("list_active_routes",
+				mcp.WithToolTitle("List installed kernel routes"),
 				mcp.WithDescription(appLine+"List the kernel routes it has installed in the macOS routing table right now. "+
 					"Each has destination (an IP or CIDR), gateway, and source (the domain or service name that caused it)."+notEgress+needs49),
-				mcp.WithString("source", mcp.Description("Only routes from this domain or service name (exact match, any case).")),
+				mcp.WithString("source", mcp.Description("Only routes from this domain or service name, such as example.com or Netflix (exact match, any case).")),
 				read(),
+				output("activeRoutes"),
 			),
 			build: simple("routes.active", "source", "source"),
 		},
 		{
 			Def: mcp.NewTool("clear_routes",
+				mcp.WithToolTitle("Clear kernel routes"),
 				mcp.WithDescription(appLine+"Remove every kernel route it installed, like the Clear button in its menu. Ask the user first: the listed traffic stops being routed until the routes come back. "+
 					"The configuration does not change, and the routes return on the next refresh_routes, VPN reconnect or DNS refresh. result.message says how many were removed."+notEgress+needs49),
 				write(true, true),
@@ -24,15 +27,17 @@ func kernelTools() []Tool {
 		},
 		{
 			Def: mcp.NewTool("refresh_routes",
-				mcp.WithDescription(appLine+"Detect the VPN again and re-apply every kernel route, like Refresh Routes in its menu. "+
+				mcp.WithToolTitle("Re-apply kernel routes"),
+				mcp.WithDescription(appLine+"Detect the VPN again and re-apply every kernel route, like Refresh Routes in its menu. Ask the user first: routed traffic can drop for a moment while the routes are rebuilt. "+
 					"Answers \"refresh started\" at once and works in the background: read status or list_active_routes a few seconds later. "+
 					"Fails with helper_not_ready when the privileged helper that installs routes is not ready."+needs49),
-				write(false, true),
+				write(true, true),
 			),
 			build: simple("refresh"),
 		},
 		{
 			Def: mcp.NewTool("refresh_dns",
+				mcp.WithToolTitle("Refresh DNS"),
 				mcp.WithDescription(appLine+"Resolve every listed domain again and change only the kernel routes whose addresses changed, like Refresh DNS now in its Settings. "+
 					"Answers \"DNS refresh started\" at once and works in the background."+needs49),
 				write(false, true),

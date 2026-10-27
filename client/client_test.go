@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -218,4 +219,58 @@ func equal(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// Error text reaches the model, so it names the socket by file name only: the
+// directory holds the macOS user name.
+func TestErrorsNameTheSocketByFileNameOnly(t *testing.T) {
+	dir, err := os.MkdirTemp("", "vpnb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(filepath.Join(dir, "locked"), 0o700); os.RemoveAll(dir) })
+
+	// A socket inside a folder nobody may enter: connect fails with EACCES,
+	// the error path that is not "not running".
+	locked := filepath.Join(dir, "locked")
+	if err := os.Mkdir(locked, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ln, err := net.Listen("unix", filepath.Join(locked, "control.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{filepath.Join(dir, "control.sock"), filepath.Join(locked, "control.sock")} {
+		_, err := New(path).Call(context.Background(), "status", nil, nil)
+		if err == nil {
+			t.Fatalf("%s: want an error", path)
+		}
+		if strings.Contains(err.Error(), dir) || !strings.Contains(err.Error(), "control.sock") {
+			t.Errorf("error %q must name control.sock and not its folder", err)
+		}
+	}
+}
+
+// A read or write that fails after connecting carries a *net.OpError too; its
+// address must not reach the message either.
+func TestWithoutAddrDropsTheSocketPath(t *testing.T) {
+	path := "/Users/someone/Library/Application Support/VPNBypass/control.sock"
+	for _, op := range []string{"dial", "write", "read"} {
+		err := &net.OpError{Op: op, Net: "unix", Addr: &net.UnixAddr{Name: path, Net: "unix"}, Err: syscall.EPIPE}
+		if !strings.Contains(err.Error(), path) {
+			t.Fatalf("control: %q should hold the path", err)
+		}
+		if got := withoutAddr(err).Error(); strings.Contains(got, "someone") || got != syscall.EPIPE.Error() {
+			t.Errorf("%s: withoutAddr = %q", op, got)
+		}
+	}
+	plain := errors.New("x")
+	if withoutAddr(plain) != plain {
+		t.Error("an error that is not a net.OpError must pass through")
+	}
 }

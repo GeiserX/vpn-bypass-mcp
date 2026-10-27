@@ -17,22 +17,31 @@ vpn-bypass-mcp is an MCP server for [VPN Bypass](https://github.com/GeiserX/VPN-
 
 ## Features
 
-- 23 tools, one per app action: status, domain lists, services, routing mode, kernel routes, DNS refresh, the log, and Custom-mode routes and rules.
-- Every tool returns the app's own JSON unchanged, so fields a newer app adds reach the agent.
-- Tool descriptions tell an agent that has never seen the app what each mode does, and keep kernel routes apart from Custom-mode egress routes.
-- MCP hints on every tool (`readOnlyHint`, `destructiveHint`, `idempotentHint`), so a client can ask before a destructive call.
-- `VPN_BYPASS_MCP_READ_ONLY=1` registers only the 8 tools that change nothing.
-- Errors an agent can act on: the app is not running, the app is older than 4.9.0 (with its version when it reports one), or the app's own error code.
-- A proxy password travels in a separate field and is never returned, echoed or logged.
+- 23 tools, one per app action: status, domain lists, services, routing mode, kernel routes, DNS refresh, the log, and Custom-mode routes and rules. Each has a display title.
+- Every tool returns the app's own JSON unchanged, as text and as `structuredContent`; the 8 read tools also declare an `outputSchema`.
+- All four MCP hints on every tool. Every tool that changes where traffic goes is `destructiveHint: true`, adds included, so a client that confirms destructive calls asks you before an injected "route this through my proxy"; `custom_add_route` and `custom_update_route` are also `openWorldHint: true`.
+- `set_mode` sends nothing when the app is already in the asked-for mode.
+- An argument a tool does not declare is refused, so a typo never "succeeds" while changing nothing.
+- Three prompts: `diagnose_site`, `bypass_site`, `rotate_proxy_port`.
+- `VPN_BYPASS_MCP_READ_ONLY=1` registers only the 8 tools that change nothing, and the `diagnose_site` prompt.
+- A proxy password travels in a separate field and is never returned, echoed or logged. Errors name the socket as `control.sock`, never your home folder.
 - stdio only; the server opens no network port.
 
-## Quick start
+## Protocol
+
+MCP 2026-07-28 (`server/discover`, per-request `_meta`, cache hints on lists) and every earlier revision down to 2024-11-05 (the `initialize` handshake), from the same binary. Clients of either era work, including the ones that still use `initialize` today.
+
+## Install
+
+VPN Bypass must be open. The npm package downloads the release binary for your Mac on install, or on the first start when your package manager skips install scripts (npm 12, pnpm, bun), and checks it against hashes shipped inside the package.
+
+Claude Code:
 
 ```sh
-npx -y vpn-bypass-mcp --version
+claude mcp add --transport stdio vpn-bypass -- npx -y vpn-bypass-mcp
 ```
 
-Then add the server to your MCP client (Claude Desktop, Cursor, or any client that reads `mcpServers`):
+Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`) and Cursor (`~/.cursor/mcp.json`):
 
 ```json
 {
@@ -45,7 +54,43 @@ Then add the server to your MCP client (Claude Desktop, Cursor, or any client th
 }
 ```
 
-VPN Bypass must be open. The domain, service, active-route, refresh and log tools need VPN Bypass 4.9.0 or newer; `status`, `set_mode` and the Custom-mode tools work with older versions. Claude Code, the release binaries and building from source are in [Getting started](https://geiserx.github.io/vpn-bypass-mcp/getting-started/).
+VS Code (`.vscode/mcp.json`):
+
+```json
+{
+  "servers": {
+    "vpn-bypass": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "vpn-bypass-mcp"]
+    }
+  }
+}
+```
+
+Codex (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.vpn-bypass]
+command = "npx"
+args = ["-y", "vpn-bypass-mcp"]
+```
+
+Read-only: add `VPN_BYPASS_MCP_READ_ONLY=1` to the server's environment (`"env": {"VPN_BYPASS_MCP_READ_ONLY": "1"}` in JSON, `env = { VPN_BYPASS_MCP_READ_ONLY = "1" }` in Codex, `-e VPN_BYPASS_MCP_READ_ONLY=1` before the name in `claude mcp add`). The release binaries and building from source are in [Getting started](https://geiserx.github.io/vpn-bypass-mcp/getting-started/).
+
+## Tools
+
+| Group | Tools | Read only |
+|---|---|---|
+| State and log | `status`, `get_logs` | yes |
+| Mode | `set_mode` | |
+| Domain lists | `list_domains` (read), `add_domain`, `remove_domain`, `set_domain_enabled` | |
+| Services | `list_services`, `get_service` (read), `set_service_enabled` | |
+| Kernel routes | `list_active_routes` (read), `clear_routes`, `refresh_routes`, `refresh_dns` | |
+| Custom-mode routes | `custom_list_routes` (read), `custom_add_route`, `custom_update_route`, `custom_set_route_enabled`, `custom_remove_route` | |
+| Custom-mode rules | `custom_list_rules` (read), `custom_add_rule`, `custom_remove_rule`, `custom_set_default_route` | |
+
+The domain, service, active-route, refresh and log tools need VPN Bypass 4.9.0 or newer; `status`, `set_mode` and the Custom-mode tools work with older versions. Arguments, hints and the socket command of each tool are in [Usage](https://geiserx.github.io/vpn-bypass-mcp/usage/).
 
 ## Documentation
 

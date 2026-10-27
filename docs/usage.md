@@ -1,6 +1,6 @@
 # Usage
 
-VPN Bypass is a macOS menu bar app that decides which traffic uses the VPN and which goes around it. This server gives an agent 23 tools, one per app action. Each tool sends one request to the app's control socket and returns the app's answer as JSON, unchanged.
+VPN Bypass is a macOS menu bar app that decides which traffic uses the VPN and which goes around it. This server gives an agent 23 tools, one per app action, and 3 prompts. Each tool sends one request to the app's control socket and returns the app's answer as JSON, unchanged, both as text and as `structuredContent`.
 
 ## Modes
 
@@ -23,7 +23,7 @@ Read tools change nothing and stay registered in read-only mode. The last column
 |---|---|---|---|---|
 | `status` | yes | | | `status` |
 | `get_logs` | yes | yes | `limit` (1-200, default 50), `level` | `logs` |
-| `set_mode` | | | `mode`: `bypass`, `vpnOnly`, `custom` | `mode` |
+| `set_mode` | | | `mode`: `bypass`, `vpnOnly`, `custom` | `status`, then `mode` unless the app is in that mode already |
 | `list_domains` | yes | yes | `list`: `bypass` or `vpnOnly` (both when omitted) | `domain.list` |
 | `add_domain` | | yes | `domain` (a host name; on `bypass` also a link, whose host is saved, from VPN Bypass 5.0; on `vpnOnly` also an IPv4 CIDR), `list` (default `bypass`) | `domain.add` |
 | `remove_domain` | | yes | `id` or `domain`, `list` | `domain.rm` |
@@ -45,7 +45,21 @@ Read tools change nothing and stay registered in read-only mode. The last column
 | `custom_remove_rule` | | | `id` | `rule.rm` |
 | `custom_set_default_route` | | | `route_id` | `default` |
 
-Every tool carries the MCP hints `readOnlyHint`, `destructiveHint` and `idempotentHint`, so a client can ask before a destructive call. The destructive ones are `set_mode`, `remove_domain`, `clear_routes`, `custom_update_route`, `custom_remove_route`, `custom_remove_rule` and `custom_set_default_route`. `set_mode` is on the list because the app re-applies every kernel route on each call, even when the mode does not change.
+Every tool has a display title and all four MCP hints: `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`.
+
+- Every tool that changes where traffic goes is destructive, adds included: `add_domain`, `remove_domain`, `set_domain_enabled`, `set_service_enabled`, `set_mode`, `clear_routes`, `refresh_routes` and every Custom-mode write. A client that confirms destructive calls then asks you before an agent, perhaps steered by a web page it read, sends a site around the VPN or through a proxy. Only `refresh_dns`, which re-resolves the entries already there, is not destructive.
+- `custom_add_route` and `custom_update_route` are also open-world: they point the Mac's traffic at a proxy host named in their arguments.
+- `set_mode` reads `status` first and sends nothing when the app is already in the asked-for mode, so it is idempotent. The answer is the same `{"mode": ...}` the app gives.
+
+Arguments a tool does not declare are refused (the input schemas say `additionalProperties: false`), and whole numbers such as `limit` and `port` are `integer`. The 8 read tools declare an `outputSchema` built from the app's result object: it requires no field and allows extra ones, so a field a newer app adds still passes.
+
+## Prompts
+
+| Prompt | Arguments | What it starts |
+|---|---|---|
+| `diagnose_site` | `site` | Find out, with read tools only, why a site uses or skips the VPN. Kept in read-only mode. |
+| `bypass_site` | `site` | Make a site skip the VPN in the current mode, asking before each change. |
+| `rotate_proxy_port` | `route`, `port` | Point a Custom-mode proxy route at another port, for a new exit IP. |
 
 ## What happens after a change
 
@@ -65,9 +79,9 @@ A failed call returns an MCP tool error with one line of text:
 
 | Text | Meaning |
 |---|---|
-| `VPN Bypass is not running; start the app` | Nothing listens on the socket. |
+| `VPN Bypass is not running; start the app` | Nothing listens on the socket. The message names the socket as `control.sock`, never by its full path, which holds your user name. |
 | `this needs VPN Bypass 4.9.0 or newer...` | The app is older than the tool. |
-| `invalid arguments: ...` | The server refused the arguments before sending anything, for example neither `id` nor `domain`, or a port of `80.5`. |
+| `invalid arguments: ...` | The server refused the arguments before sending anything, for example neither `id` nor `domain`, a port of `80.5`, or an argument the tool does not take (`unknown argument enable; custom_update_route takes enabled, host, ...`). |
 | `<code>: <message>` | The app's own error, passed through: `not_found`, `invalid_args`, `already_exists`, `invalid_port`, `invalid_type`, `helper_not_ready`, `timeout`, `request_too_large`. |
 
 ## Things to ask

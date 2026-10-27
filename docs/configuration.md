@@ -5,7 +5,7 @@ The server reads two environment variables. It has no config file and no command
 | Variable | Default | What it does |
 |---|---|---|
 | `VPNB_SOCKET` | `~/Library/Application Support/VPNBypass/control.sock` | Path of the VPN Bypass control socket. The `vpnb` command-line client that ships with the app reads the same variable. |
-| `VPN_BYPASS_MCP_READ_ONLY` | unset | Set to `1` to register only the 8 tools that change nothing: `status`, `get_logs`, `list_domains`, `list_services`, `get_service`, `list_active_routes`, `custom_list_routes`, `custom_list_rules`. An unset or empty value, `0`, `false` or `no` (in any case, with spaces trimmed) leaves it off; any other value turns it on, so a typo never exposes the write tools. |
+| `VPN_BYPASS_MCP_READ_ONLY` | unset | Set to `1` to register only the 8 tools that change nothing: `status`, `get_logs`, `list_domains`, `list_services`, `get_service`, `list_active_routes`, `custom_list_routes`, `custom_list_rules`, and only the `diagnose_site` prompt. An unset or empty value, `0`, `false` or `no` (in any case, with spaces trimmed) leaves it off; any other value turns it on, so a typo never exposes the write tools. |
 
 ## Read-only mode in a client
 
@@ -35,4 +35,6 @@ A read tool waits up to 35 seconds for the app (the app itself gives up on a rea
 
 - The control socket is a UNIX socket in your home folder, readable only by your user, and the app refuses any other user. The server opens no network port.
 - A proxy password given to `custom_add_route` or `custom_update_route` goes to the app in a separate `secrets` field. The app never sends it back, and the server never logs or echoes it.
-- The server writes its log to stderr: one start line with the version, the tool count, read-only or not, and the socket path. It logs no tool arguments.
+- The server writes its log to stderr: one start line with the version, the tool count, read-only or not, and the socket path. It logs no tool arguments. Tool results, which go to the model, name the socket as `control.sock` only.
+- Every tool that changes where traffic goes is marked destructive, so a client that confirms destructive calls asks you first ([Usage](usage.md#tools)).
+- The npm package checks the downloaded binary against `checksums.txt` shipped inside the package by the release workflow, so the hashes are covered by npm's provenance. It downloads only from GitHub over HTTPS, and stops at 64 MiB.

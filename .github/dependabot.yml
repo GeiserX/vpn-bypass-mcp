@@ -20,10 +20,9 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
+    # No semver-major ignore here: the direct Go dependencies are the MCP SDK
+    # (mark3labs/mcp-go), whose major releases carry new protocol revisions,
+    # and a JSON Schema validator used only by tests.
 
   - package-ecosystem: npm
     directory: /
