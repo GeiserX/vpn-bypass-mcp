@@ -219,3 +219,38 @@ func equal(a, b []string) bool {
 	}
 	return true
 }
+
+// Error text reaches the model, so it names the socket by file name only: the
+// directory holds the macOS user name.
+func TestErrorsNameTheSocketByFileNameOnly(t *testing.T) {
+	dir, err := os.MkdirTemp("", "vpnb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(filepath.Join(dir, "locked"), 0o700); os.RemoveAll(dir) })
+
+	// A socket inside a folder nobody may enter: connect fails with EACCES,
+	// the error path that is not "not running".
+	locked := filepath.Join(dir, "locked")
+	if err := os.Mkdir(locked, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ln, err := net.Listen("unix", filepath.Join(locked, "control.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{filepath.Join(dir, "control.sock"), filepath.Join(locked, "control.sock")} {
+		_, err := New(path).Call(context.Background(), "status", nil, nil)
+		if err == nil {
+			t.Fatalf("%s: want an error", path)
+		}
+		if strings.Contains(err.Error(), dir) || !strings.Contains(err.Error(), "control.sock") {
+			t.Errorf("error %q must name control.sock and not its folder", err)
+		}
+	}
+}

@@ -45,7 +45,7 @@ func domainTools() []Tool {
 					"read list_active_routes or get_logs afterwards to see them. Fails with already_exists when the entry is on that list already."+needs49),
 				mcp.WithString("domain", mcp.Required(), mcp.Description("The host name (example.com). On the bypass list also a link to it; on the vpnOnly list also a CIDR.")),
 				mcp.WithString("list", mcp.Description(listArg+" Default bypass."), mcp.Enum("bypass", "vpnOnly")),
-				write(false, true),
+				write(true, true),
 			),
 			build: func(a args) (call, error) {
 				if _, err := a.required("domain"); err != nil {
@@ -67,7 +67,7 @@ func domainTools() []Tool {
 				appLine+"Turn one domain list entry on or off without removing it. "+
 					"A disabled entry stays on its list and gets no kernel routes. Asking for the state it already has is not an error."+lookupNote+needs49,
 				mcp.WithBoolean("enabled", mcp.Required(), mcp.Description("true to enable, false to disable.")),
-				write(false, true),
+				write(true, true),
 			)...),
 			build: func(a args) (call, error) {
 				on, err := a.requiredBool("enabled")

@@ -49,7 +49,8 @@ func customTools() []Tool {
 				mcp.WithString("password", mcp.Description(passwordArg)),
 				mcp.WithString("interface", mcp.Description("type vpn only: the tunnel interface to pin, such as utun4.")),
 				mcp.WithString("product", mcp.Description("type vpn only: the tunnel's label, such as WireGuard.")),
-				write(false, false),
+				write(true, false),
+				external(),
 			),
 			build: func(a args) (call, error) {
 				if _, err := a.required("name"); err != nil {
@@ -76,6 +77,7 @@ func customTools() []Tool {
 				mcp.WithBoolean("enabled", mcp.Description("true to enable, false to disable.")),
 				mcp.WithString("password", mcp.Description(passwordArg+" An empty string removes it.")),
 				write(true, true),
+				external(),
 			),
 			build: func(a args) (call, error) {
 				c, err := requireID("route.set", "name", "name", "host", "host", "port", "port", "user", "user", "enabled", "enabled")(a)
@@ -106,7 +108,7 @@ func customTools() []Tool {
 				mcp.WithDescription(appLine+customLine+"Turn one egress route on or off."+notKernel),
 				idArg,
 				mcp.WithBoolean("enabled", mcp.Required(), mcp.Description("true to enable, false to disable.")),
-				write(false, true),
+				write(true, true),
 			),
 			build: func(a args) (call, error) {
 				on, err := a.requiredBool("enabled")
@@ -146,7 +148,7 @@ func customTools() []Tool {
 				mcp.WithString("match", mcp.Required(), mcp.Enum("domain", "suffix", "ip", "cidr", "service", "process"), mcp.Description("What the pattern is.")),
 				mcp.WithString("pattern", mcp.Required(), mcp.Description("The value to match.")),
 				mcp.WithString("route_id", mcp.Required(), mcp.Description("The egress route id to send matching traffic to (from custom_list_routes).")),
-				write(false, false),
+				write(true, false),
 			),
 			build: func(a args) (call, error) {
 				for _, k := range []string{"match", "pattern", "route_id"} {

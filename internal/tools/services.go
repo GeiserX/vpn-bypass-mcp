@@ -38,7 +38,7 @@ func serviceTools() []Tool {
 					"Asking for the state it already has is not an error."+needs49),
 				mcp.WithString("id", mcp.Required(), mcp.Description("The service id from list_services.")),
 				mcp.WithBoolean("enabled", mcp.Required(), mcp.Description("true to enable, false to disable.")),
-				write(false, true),
+				write(true, true),
 			),
 			build: func(a args) (call, error) {
 				on, err := a.requiredBool("enabled")

@@ -221,6 +221,9 @@ func TestNotRunning(t *testing.T) {
 	if !res.IsError || !strings.HasPrefix(text, "VPN Bypass is not running; start the app") {
 		t.Fatalf("got %q, want the not-running message", text)
 	}
+	if strings.Contains(text, dir) {
+		t.Errorf("the message %q shows the socket folder", text)
+	}
 }
 
 func TestUnknownCommandOnAnOldApp(t *testing.T) {
@@ -276,10 +279,15 @@ func TestReadOnlyModeKeepsOnlyReadTools(t *testing.T) {
 	}
 }
 
-// The tools a client should confirm before calling. set_mode is one: the app
-// re-applies every kernel route even when the mode does not change.
+// The tools a client should confirm before calling: every write that changes
+// where traffic goes, adds included (an injected "bypass bank.example" or
+// "route it through my proxy" is the attack), and refresh_routes and set_mode,
+// which re-apply every kernel route. Only refresh_dns, which re-resolves the
+// existing entries, is not.
 func TestDestructiveTools(t *testing.T) {
-	want := "clear_routes,custom_remove_route,custom_remove_rule,custom_set_default_route,custom_update_route,remove_domain,set_mode"
+	want := "add_domain,clear_routes,custom_add_route,custom_add_rule,custom_remove_route,custom_remove_rule," +
+		"custom_set_default_route,custom_set_route_enabled,custom_update_route,refresh_routes,remove_domain," +
+		"set_domain_enabled,set_mode,set_service_enabled"
 	var got []string
 	for _, tool := range All(false) {
 		if *tool.Def.Annotations.DestructiveHint {
@@ -325,8 +333,10 @@ func TestAnnotationsMatchTheVerb(t *testing.T) {
 		if tool.ReadOnly && *a.DestructiveHint {
 			t.Errorf("%s: a read tool cannot be destructive", tool.Def.Name)
 		}
-		if *a.OpenWorldHint {
-			t.Errorf("%s: openWorldHint must be false", tool.Def.Name)
+		// Only the tools that point traffic at a proxy host they name reach
+		// outside this Mac.
+		if want := tool.Def.Name == "custom_add_route" || tool.Def.Name == "custom_update_route"; *a.OpenWorldHint != want {
+			t.Errorf("%s: openWorldHint = %v, want %v", tool.Def.Name, *a.OpenWorldHint, want)
 		}
 		if !strings.Contains(tool.Def.Description, "VPN Bypass is a macOS menu bar app") {
 			t.Errorf("%s: the description must say what the app is", tool.Def.Name)

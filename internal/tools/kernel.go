@@ -27,7 +27,7 @@ func kernelTools() []Tool {
 				mcp.WithDescription(appLine+"Detect the VPN again and re-apply every kernel route, like Refresh Routes in its menu. "+
 					"Answers \"refresh started\" at once and works in the background: read status or list_active_routes a few seconds later. "+
 					"Fails with helper_not_ready when the privileged helper that installs routes is not ready."+needs49),
-				write(false, true),
+				write(true, true),
 			),
 			build: simple("refresh"),
 		},

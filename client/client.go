@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -138,9 +139,13 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 		}
 	}
 
+	// Error messages reach the model, so they name the socket by its file name
+	// only: the full path holds the macOS user name. The server's stderr start
+	// line still logs the full path for the user.
 	if len(c.SocketPath) > maxSocketPath {
-		return nil, fmt.Errorf("the socket path %s is too long: %d bytes, and macOS allows at most %d (check VPNB_SOCKET)", c.SocketPath, len(c.SocketPath), maxSocketPath)
+		return nil, fmt.Errorf("the control socket path is too long: %d bytes, and macOS allows at most %d (check VPNB_SOCKET)", len(c.SocketPath), maxSocketPath)
 	}
+	sockName := filepath.Base(c.SocketPath)
 
 	mutating := IsMutating(cmd)
 	timeout := c.ReadTimeout
@@ -155,12 +160,17 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 	conn, err := d.DialContext(dialCtx, "unix", c.SocketPath)
 	if err != nil {
 		if errors.Is(err, syscall.ENOENT) || errors.Is(err, syscall.ECONNREFUSED) {
-			return nil, fmt.Errorf("%w (nothing is listening on %s)", ErrNotRunning, c.SocketPath)
+			return nil, fmt.Errorf("%w (nothing is listening on its control socket, %s)", ErrNotRunning, sockName)
 		}
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, fmt.Errorf("connect to the VPN Bypass control socket %s: %w", c.SocketPath, err)
+		// net.OpError prints the full address; keep only the cause.
+		var oe *net.OpError
+		if errors.As(err, &oe) && oe.Err != nil {
+			err = oe.Err
+		}
+		return nil, fmt.Errorf("connect to the VPN Bypass control socket %s: %w", sockName, err)
 	}
 	defer conn.Close()
 
