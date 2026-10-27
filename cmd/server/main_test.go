@@ -132,7 +132,10 @@ func TestStdioInitializeListAndCall(t *testing.T) {
 }
 
 func TestStdioReadOnly(t *testing.T) {
-	got := session(t, "1", `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+	got := session(t, "1", `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`, `{"jsonrpc":"2.0","id":3,"method":"prompts/list"}`)
+	if prompts := got[3]["result"].(map[string]any)["prompts"].([]any); len(prompts) != 1 {
+		t.Errorf("read-only prompts/list returned %d prompts, want only diagnose_site", len(prompts))
+	}
 	names := toolNames(t, got[2])
 	if len(names) != 8 {
 		t.Fatalf("read-only tools/list returned %d tools (%v), want 8", len(names), names)

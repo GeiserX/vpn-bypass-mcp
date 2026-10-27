@@ -12,6 +12,7 @@ import (
 	"github.com/geiserx/vpn-bypass-mcp/client"
 	"github.com/geiserx/vpn-bypass-mcp/internal/fakeapp"
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 func find(t *testing.T, name string) Tool {
@@ -42,7 +43,8 @@ func invoke(t *testing.T, c *client.Client, name string, a map[string]any) (*mcp
 	return res, text.Text
 }
 
-// Every tool: the exact request line it sends and the result it passes back.
+// Every tool: the exact request lines it sends (one per line) and the result
+// it passes back.
 var cases = []struct {
 	tool   string
 	args   map[string]any
@@ -55,7 +57,9 @@ var cases = []struct {
 		`{"logs":[{"level":"INFO","message":"Routes applied","time":"2026-09-30T12:00:00Z"}]}`},
 	{"get_logs", map[string]any{"limit": float64(20), "level": "error"}, `{"v":1,"cmd":"logs","args":{"level":"error","limit":"20"}}`,
 		`{"logs":[]}`},
-	{"set_mode", map[string]any{"mode": "vpnOnly"}, `{"v":1,"cmd":"mode","args":{"mode":"vpnOnly"}}`,
+	// set_mode reads status first; the fake app is in bypass mode (see
+	// TestEveryToolSendsTheContractRequest), so the switch goes out.
+	{"set_mode", map[string]any{"mode": "vpnOnly"}, `{"v":1,"cmd":"status"}` + "\n" + `{"v":1,"cmd":"mode","args":{"mode":"vpnOnly"}}`,
 		`{"mode":"vpnOnly"}`},
 	{"list_domains", nil, `{"v":1,"cmd":"domain.list"}`,
 		`{"domains":[{"domain":"example.com","enabled":true,"id":"6F1C","isCIDR":false,"isWildcard":false,"list":"bypass"}]}`},
@@ -126,16 +130,27 @@ func TestEveryToolSendsTheContractRequest(t *testing.T) {
 	for _, tc := range cases {
 		covered[tc.tool] = true
 		t.Run(tc.tool, func(t *testing.T) {
-			app := fakeapp.Start(t, func(fakeapp.Request) fakeapp.Reply { return fakeapp.OK(json.RawMessage(tc.result)) })
+			// The fake app answers every verb with the row's result, except
+			// status for another tool: then it is in bypass mode.
+			app := fakeapp.Start(t, func(r fakeapp.Request) fakeapp.Reply {
+				if r.Cmd == "status" && tc.tool != "status" {
+					return fakeapp.OK(map[string]any{"mode": "bypass"})
+				}
+				return fakeapp.OK(json.RawMessage(tc.result))
+			})
 			res, text := invoke(t, client.New(app.Path), tc.tool, tc.args)
 			if res.IsError {
 				t.Fatalf("tool error: %s", text)
 			}
-			if lines := app.Lines(); len(lines) != 1 || lines[0] != tc.line {
-				t.Errorf("request lines = %q\nwant            [%s]", lines, tc.line)
+			if lines := strings.Join(app.Lines(), "\n"); lines != tc.line {
+				t.Errorf("request lines:\n%s\nwant:\n%s", lines, tc.line)
 			}
 			if text != tc.result {
 				t.Errorf("result = %s\nwant     %s", text, tc.result)
+			}
+			// The same object goes out as structuredContent.
+			if got, err := json.Marshal(res.StructuredContent); err != nil || string(got) != tc.result {
+				t.Errorf("structuredContent = %s (%v)\nwant                %s", got, err, tc.result)
 			}
 		})
 	}
@@ -298,8 +313,10 @@ func TestDestructiveTools(t *testing.T) {
 	if strings.Join(got, ",") != want {
 		t.Errorf("destructive tools = %v\nwant %s", got, want)
 	}
-	if mode := find(t, "set_mode").Def.Annotations; *mode.IdempotentHint {
-		t.Error("set_mode is not idempotent: every call re-applies the kernel routes")
+	// set_mode skips a switch to the mode already in use (sameMode), so a
+	// second identical call changes nothing more.
+	if mode := find(t, "set_mode").Def.Annotations; !*mode.IdempotentHint {
+		t.Error("set_mode is idempotent: a call for the mode in use sends nothing")
 	}
 }
 
@@ -379,5 +396,169 @@ func TestTargetDomainAsksForTheSavedHost(t *testing.T) {
 		if desc, _ := prop["description"].(string); !strings.Contains(desc, "the saved host") || !strings.Contains(desc, "not the link") {
 			t.Errorf("%s: domain description %q does not ask for the saved host", name, desc)
 		}
+	}
+}
+
+// set_mode for the mode already in use sends nothing after status and answers
+// what the app answers; when status fails the switch still goes out, so the
+// app reports its own error.
+func TestSetModeSkipsTheModeInUse(t *testing.T) {
+	app := fakeapp.Start(t, func(r fakeapp.Request) fakeapp.Reply {
+		return fakeapp.OK(map[string]any{"mode": "vpnOnly", "runtime": map[string]any{"enforcing": true}})
+	})
+	res, text := invoke(t, client.New(app.Path), "set_mode", map[string]any{"mode": "vpnOnly"})
+	if res.IsError || text != `{"mode":"vpnOnly"}` {
+		t.Fatalf("set_mode = %q (error=%v), want {\"mode\":\"vpnOnly\"}", text, res.IsError)
+	}
+	if lines := app.Lines(); len(lines) != 1 || lines[0] != `{"v":1,"cmd":"status"}` {
+		t.Errorf("request lines = %q, want only status", lines)
+	}
+
+	app = fakeapp.Start(t, func(r fakeapp.Request) fakeapp.Reply {
+		if r.Cmd == "status" {
+			return fakeapp.Fail("timeout", "status timed out")
+		}
+		return fakeapp.OK(map[string]any{"mode": "custom"})
+	})
+	res, text = invoke(t, client.New(app.Path), "set_mode", map[string]any{"mode": "custom"})
+	if res.IsError || text != `{"mode":"custom"}` {
+		t.Fatalf("set_mode after a failed status = %q (error=%v)", text, res.IsError)
+	}
+	if lines := app.Lines(); len(lines) != 2 || lines[1] != `{"v":1,"cmd":"mode","args":{"mode":"custom"}}` {
+		t.Errorf("request lines = %q, want status then mode", lines)
+	}
+}
+
+// A typo such as "enable" for "enabled" used to be dropped silently, and the
+// call reported success while changing nothing.
+func TestUnknownArgumentsAreRefused(t *testing.T) {
+	for _, tc := range []struct {
+		tool string
+		args map[string]any
+		want string
+	}{
+		{"custom_update_route", map[string]any{"id": "R1", "enable": false}, "unknown argument enable; custom_update_route takes enabled, host, id, name, password, port, user"},
+		{"refresh_dns", map[string]any{"force": true}, "unknown argument force; refresh_dns takes no arguments"},
+		{"add_domain", map[string]any{"domain": "example.com", "lists": "vpnOnly", "zz": 1}, "unknown argument lists, zz;"},
+	} {
+		app := fakeapp.Start(t, func(fakeapp.Request) fakeapp.Reply { return fakeapp.OK(nil) })
+		res, text := invoke(t, client.New(app.Path), tc.tool, tc.args)
+		if !res.IsError || !strings.Contains(text, tc.want) {
+			t.Errorf("%s %v: got %q (error=%v), want %q", tc.tool, tc.args, text, res.IsError, tc.want)
+		}
+		if n := len(app.Lines()); n != 0 {
+			t.Errorf("%s: sent %d requests, want 0", tc.tool, n)
+		}
+	}
+}
+
+// Every tool has its own display title, a schema that refuses unknown
+// arguments, and integer (never number) for whole-number arguments.
+func TestToolMetadata(t *testing.T) {
+	titles := map[string]string{}
+	for _, tool := range All(false) {
+		d := tool.Def
+		if d.Title == "" {
+			t.Errorf("%s: no title", d.Name)
+		}
+		if other, dup := titles[d.Title]; dup {
+			t.Errorf("%s and %s share the title %q", d.Name, other, d.Title)
+		}
+		titles[d.Title] = d.Name
+		if d.InputSchema.AdditionalProperties != false {
+			t.Errorf("%s: additionalProperties = %v, want false", d.Name, d.InputSchema.AdditionalProperties)
+		}
+		for name, p := range d.InputSchema.Properties {
+			if p.(map[string]any)["type"] == "number" {
+				t.Errorf("%s.%s: type number; whole numbers are integer", d.Name, name)
+			}
+		}
+		if tool.ReadOnly != (len(d.RawOutputSchema) > 0) {
+			t.Errorf("%s: read tools, and only they, declare an outputSchema", d.Name)
+		}
+	}
+}
+
+// Each read tool's outputSchema accepts every answer the tests pin for it and
+// the 4.8 app's status, and refuses a field of the wrong type, so the schema
+// is neither broken nor empty.
+func TestOutputSchemasAcceptTheAppsAnswers(t *testing.T) {
+	legacyStatus, _ := json.Marshal(fakeapp.Legacy(fakeapp.Request{Cmd: "status"}).Result)
+	answers := map[string][]string{"status": {string(legacyStatus)}}
+	for _, tc := range cases {
+		answers[tc.tool] = append(answers[tc.tool], tc.result)
+	}
+	for _, tool := range All(true) {
+		name := tool.Def.Name
+		var doc map[string]any
+		if err := json.Unmarshal(tool.Def.RawOutputSchema, &doc); err != nil {
+			t.Fatalf("%s: outputSchema is not JSON: %v", name, err)
+		}
+		c := jsonschema.NewCompiler()
+		if err := c.AddResource("out.json", doc); err != nil {
+			t.Fatal(err)
+		}
+		sch, err := c.Compile("out.json")
+		if err != nil {
+			t.Fatalf("%s: outputSchema does not compile: %v", name, err)
+		}
+		if len(answers[name]) == 0 {
+			t.Errorf("%s: no pinned answer to check", name)
+		}
+		for _, a := range answers[name] {
+			inst, err := jsonschema.UnmarshalJSON(strings.NewReader(a))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := sch.Validate(inst); err != nil {
+				t.Errorf("%s: outputSchema refuses %s: %v", name, a, err)
+			}
+		}
+		props := doc["properties"].(map[string]any)
+		for field, p := range props {
+			wrong := map[string]any{"string": 1.0, "integer": "x", "boolean": "x", "array": "x", "object": "x"}[p.(map[string]any)["type"].(string)]
+			if err := sch.Validate(map[string]any{field: wrong}); err == nil {
+				t.Errorf("%s: outputSchema accepts %s = %v", name, field, wrong)
+			}
+		}
+	}
+}
+
+func TestPrompts(t *testing.T) {
+	var names []string
+	for _, p := range Prompts(false) {
+		names = append(names, p.Def.Name)
+	}
+	if got := strings.Join(names, ","); got != "diagnose_site,bypass_site,rotate_proxy_port" {
+		t.Errorf("prompts = %s", got)
+	}
+	if ro := Prompts(true); len(ro) != 1 || ro[0].Def.Name != "diagnose_site" {
+		t.Errorf("read-only prompts = %v, want diagnose_site only", ro)
+	}
+	get := func(name string, a map[string]string) (string, error) {
+		for _, p := range Prompts(false) {
+			if p.Def.Name == name {
+				req := mcp.GetPromptRequest{}
+				req.Params.Arguments = a
+				res, err := promptHandler(p)(context.Background(), req)
+				if err != nil {
+					return "", err
+				}
+				return res.Messages[0].Content.(mcp.TextContent).Text, nil
+			}
+		}
+		t.Fatalf("no prompt %s", name)
+		return "", nil
+	}
+	text, err := get("diagnose_site", map[string]string{"site": "example.com"})
+	if err != nil || !strings.Contains(text, "why example.com goes") || !strings.Contains(text, "change nothing") {
+		t.Errorf("diagnose_site = %q, %v", text, err)
+	}
+	text, err = get("rotate_proxy_port", map[string]string{"route": "Resi", "port": "24001"})
+	if err != nil || !strings.Contains(text, `"Resi" at port 24001`) || !strings.Contains(text, "port 24001; change nothing else") {
+		t.Errorf("rotate_proxy_port = %q, %v", text, err)
+	}
+	if _, err := get("bypass_site", map[string]string{"site": " "}); err == nil || !strings.Contains(err.Error(), "site") {
+		t.Errorf("bypass_site without site: err = %v", err)
 	}
 }

@@ -3,8 +3,9 @@ package tools
 import "github.com/mark3labs/mcp-go/mcp"
 
 func domainTools() []Tool {
-	targetArgs := func(desc string, extra ...mcp.ToolOption) []mcp.ToolOption {
+	targetArgs := func(title, desc string, extra ...mcp.ToolOption) []mcp.ToolOption {
 		return append([]mcp.ToolOption{
+			mcp.WithToolTitle(title),
 			mcp.WithDescription(desc),
 			mcp.WithString("id", mcp.Description("The entry id (a UUID from list_domains). Give id or domain.")),
 			mcp.WithString("domain", mcp.Description("The domain or CIDR as listed: for an entry added from a link, the saved host (www.example.com), not the link. Give id or domain.")),
@@ -24,17 +25,20 @@ func domainTools() []Tool {
 		{
 			ReadOnly: true,
 			Def: mcp.NewTool("list_domains",
+				mcp.WithToolTitle("List domain entries"),
 				mcp.WithDescription(appLine+"List the entries of its two domain lists. "+
 					"The bypass list is used in Bypass mode: those domains go around the VPN. "+
 					"The vpnOnly list is used in VPN Only mode: only those domains and CIDR ranges go through the VPN. "+
 					"Each entry has id, domain, enabled, list, isCIDR and isWildcard. Without list, both lists come back, bypass first."+needs49),
 				mcp.WithString("list", mcp.Description(listArg+" Omit for both."), mcp.Enum("bypass", "vpnOnly")),
 				read(),
+				output("domains"),
 			),
 			build: simple("domain.list", "list", "list"),
 		},
 		{
 			Def: mcp.NewTool("add_domain",
+				mcp.WithToolTitle("Add a domain"),
 				mcp.WithDescription(appLine+"Add a domain to one of its lists. "+
 					"The app trims the value and lower-cases it. "+
 					"On the bypass list a pasted link works: the app drops the scheme, user, port, path and query and saves the host (https://www.example.com/page saves www.example.com). "+
@@ -55,7 +59,7 @@ func domainTools() []Tool {
 			},
 		},
 		{
-			Def: mcp.NewTool("remove_domain", targetArgs(
+			Def: mcp.NewTool("remove_domain", targetArgs("Remove a domain",
 				appLine+"Remove an entry from one of its domain lists, by id or by domain. "+
 					"Its kernel routes are removed in the background."+lookupNote+" Fails with not_found when nothing matches."+needs49,
 				write(true, true),
@@ -63,7 +67,7 @@ func domainTools() []Tool {
 			build: targeted("domain.rm"),
 		},
 		{
-			Def: mcp.NewTool("set_domain_enabled", targetArgs(
+			Def: mcp.NewTool("set_domain_enabled", targetArgs("Turn a domain on or off",
 				appLine+"Turn one domain list entry on or off without removing it. "+
 					"A disabled entry stays on its list and gets no kernel routes. Asking for the state it already has is not an error."+lookupNote+needs49,
 				mcp.WithBoolean("enabled", mcp.Required(), mcp.Description("true to enable, false to disable.")),

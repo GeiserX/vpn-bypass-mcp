@@ -36,10 +36,15 @@ client starts it. It reaches the app through the app's control socket.
 Environment:
   VPNB_SOCKET                 control socket path (default:
                               ~/Library/Application Support/VPNBypass/control.sock)
-  VPN_BYPASS_MCP_READ_ONLY=1  register only the tools that change nothing
+  VPN_BYPASS_MCP_READ_ONLY=1  register only the tools (and the prompt) that
+                              change nothing
+
+Protocol: MCP 2026-07-28 (server/discover) and every earlier revision down to
+2024-11-05 (initialize), from the same binary.
 `
 
-// newServer builds the MCP server with its tools.
+// newServer builds the MCP server with its tools and prompts, and returns how
+// many tools it registered.
 func newServer(cfg config.Config) (*server.MCPServer, int) {
 	s := server.NewMCPServer(
 		"vpn-bypass-mcp",
@@ -54,6 +59,7 @@ func newServer(cfg config.Config) (*server.MCPServer, int) {
 		server.WithRecovery(),
 	)
 	n := tools.Register(s, client.New(cfg.SocketPath), cfg.ReadOnly)
+	tools.RegisterPrompts(s, cfg.ReadOnly)
 	return s, n
 }
 

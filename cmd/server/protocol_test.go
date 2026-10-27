@@ -27,6 +27,7 @@ func TestProtocolModern(t *testing.T) {
 		`{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{`+modernMeta+`}}`,
 		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"status","arguments":{},`+modernMeta+`}}`,
 		`{"jsonrpc":"2.0","id":4,"method":"ping","params":{`+modernMeta+`}}`,
+		`{"jsonrpc":"2.0","id":5,"method":"prompts/list","params":{`+modernMeta+`}}`,
 	)
 
 	discover := result(t, got[1])
@@ -48,7 +49,7 @@ func TestProtocolModern(t *testing.T) {
 		t.Errorf("serverInfo = %v", info)
 	}
 
-	for id, method := range map[float64]string{1: "server/discover", 2: "tools/list"} {
+	for id, method := range map[float64]string{1: "server/discover", 2: "tools/list", 5: "prompts/list"} {
 		r := result(t, got[id])
 		if r["resultType"] != "complete" || r["ttlMs"] != float64(listTTL) || r["cacheScope"] != "private" {
 			t.Errorf("%s: resultType=%v ttlMs=%v cacheScope=%v, want complete, %d, private", method, r["resultType"], r["ttlMs"], r["cacheScope"], listTTL)
@@ -61,6 +62,12 @@ func TestProtocolModern(t *testing.T) {
 	status := result(t, got[3])
 	if status["resultType"] != "complete" || status["isError"] == true {
 		t.Errorf("modern tools/call status = %v", status)
+	}
+	if sc, _ := status["structuredContent"].(map[string]any); sc["mode"] != "bypass" {
+		t.Errorf("status structuredContent = %v, want the app's object", status["structuredContent"])
+	}
+	if n := len(result(t, got[5])["prompts"].([]any)); n != 3 {
+		t.Errorf("prompts/list returned %d prompts, want 3", n)
 	}
 
 	// ping was removed in 2026-07-28; a modern ping is an unknown method.
