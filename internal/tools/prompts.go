@@ -45,9 +45,10 @@ func Prompts(readOnly bool) []Prompt {
 			),
 			text: func(a map[string]string) string {
 				return fmt.Sprintf("Make %s skip the VPN with VPN Bypass. Read status first and work in the current mode; do not switch modes.\n"+
-					"- bypass mode: add_domain with list bypass.\n"+
+					"- bypass mode: list_domains with list bypass first. If %[1]s is there but disabled, offer set_domain_enabled; if it is missing, offer add_domain with list bypass.\n"+
 					"- vpnOnly mode: the site already skips the VPN unless it is on the VPN Only list; if list_domains shows it there, offer remove_domain.\n"+
-					"- custom mode: find the Direct route in custom_list_routes and offer custom_add_rule with match suffix, pattern %[1]s and that route_id.\n"+
+					"- custom mode: read custom_list_rules first. A new rule goes at the end and the first match wins, so if an earlier rule already matches %[1]s, show it and offer to change or remove that rule instead. "+
+					"Otherwise find the Direct route in custom_list_routes and offer custom_add_rule with match suffix, pattern %[1]s and that route_id.\n"+
 					"Tell me the exact change and wait for my yes before calling any tool that changes something. Afterwards, show what changed with list_active_routes or get_logs.", a["site"])
 			},
 		},

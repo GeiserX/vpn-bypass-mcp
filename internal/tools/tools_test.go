@@ -558,6 +558,10 @@ func TestPrompts(t *testing.T) {
 	if err != nil || !strings.Contains(text, `"Resi" at port 24001`) || !strings.Contains(text, "port 24001; change nothing else") {
 		t.Errorf("rotate_proxy_port = %q, %v", text, err)
 	}
+	text, err = get("bypass_site", map[string]string{"site": "example.com"})
+	if err != nil || !strings.Contains(text, "but disabled, offer set_domain_enabled") || !strings.Contains(text, "if an earlier rule already matches example.com") {
+		t.Errorf("bypass_site = %q, %v", text, err)
+	}
 	if _, err := get("bypass_site", map[string]string{"site": " "}); err == nil || !strings.Contains(err.Error(), "site") {
 		t.Errorf("bypass_site without site: err = %v", err)
 	}
