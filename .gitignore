@@ -1,6 +1,8 @@
 /dist/
 /bin/
 /vpn-bypass-mcp
+# release.yml copies GoReleaser's checksums.txt here before npm publish
+/checksums.txt
 *.out
 *.test
 .DS_Store
