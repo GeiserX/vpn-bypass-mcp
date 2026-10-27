@@ -47,8 +47,10 @@ func Prompts(readOnly bool) []Prompt {
 				return fmt.Sprintf("Make %s skip the VPN with VPN Bypass. Read status first and work in the current mode; do not switch modes.\n"+
 					"- bypass mode: list_domains with list bypass first. If %[1]s is there but disabled, offer set_domain_enabled; if it is missing, offer add_domain with list bypass.\n"+
 					"- vpnOnly mode: the site already skips the VPN unless it is on the VPN Only list; if list_domains shows it there, offer remove_domain.\n"+
-					"- custom mode: read custom_list_rules first. A new rule goes at the end and the first match wins, so if an earlier rule already matches %[1]s, show it and offer to change or remove that rule instead. "+
-					"Otherwise find the Direct route in custom_list_routes and offer custom_add_rule with match suffix, pattern %[1]s and that route_id.\n"+
+					"- custom mode: read custom_list_rules, custom_list_routes and defaultRouteId from status. The first enabled rule that matches %[1]s decides its route; if none matches, the default route does. "+
+					"If that route is already Direct, say so and change nothing. If no rule matches, offer custom_add_rule with match suffix, pattern %[1]s and the Direct route's route_id. "+
+					"If an enabled rule sends it elsewhere, a new rule would go after it and never win, and no tool edits a rule: show me that rule and every site it covers (a suffix rule covers all subdomains), "+
+					"and offer custom_remove_rule only if I accept that those sites then fall to the next matching rule or the default route.\n"+
 					"Tell me the exact change and wait for my yes before calling any tool that changes something. Afterwards, show what changed with list_active_routes or get_logs.", a["site"])
 			},
 		},

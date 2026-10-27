@@ -46,11 +46,14 @@ jobs:
         with:
           go-version-file: go.mod
       # Build govulncheck for this Linux runner, then point it at the darwin
-      # build, because the release binaries are darwin only.
+      # build of each release architecture, because the release binaries are
+      # darwin amd64 and arm64 only.
       - name: govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
-          GOOS=darwin "$(go env GOPATH)/bin/govulncheck" ./...
+          for arch in amd64 arm64; do
+            GOOS=darwin GOARCH=$arch "$(go env GOPATH)/bin/govulncheck" ./...
+          done
 
   build:
     # Builds the release archives from .goreleaser.yaml without publishing, so

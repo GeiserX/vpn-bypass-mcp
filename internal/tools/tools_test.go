@@ -559,7 +559,7 @@ func TestPrompts(t *testing.T) {
 		t.Errorf("rotate_proxy_port = %q, %v", text, err)
 	}
 	text, err = get("bypass_site", map[string]string{"site": "example.com"})
-	if err != nil || !strings.Contains(text, "but disabled, offer set_domain_enabled") || !strings.Contains(text, "if an earlier rule already matches example.com") {
+	if err != nil || !strings.Contains(text, "but disabled, offer set_domain_enabled") || !strings.Contains(text, "If that route is already Direct, say so and change nothing") || !strings.Contains(text, "no tool edits a rule") || strings.Contains(text, "change or remove that rule") {
 		t.Errorf("bypass_site = %q, %v", text, err)
 	}
 	if _, err := get("bypass_site", map[string]string{"site": " "}); err == nil || !strings.Contains(err.Error(), "site") {
