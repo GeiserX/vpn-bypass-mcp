@@ -13,9 +13,19 @@ import (
 	"github.com/geiserx/vpn-bypass-mcp/internal/fakeapp"
 )
 
-// session drives the real stdio server: it writes JSON-RPC lines and collects
-// the response to each id.
+// session drives the real stdio server through a legacy initialize handshake,
+// then the given calls, and collects the response to each id.
 func session(t *testing.T, readOnly string, calls ...string) map[float64]map[string]any {
+	t.Helper()
+	return exchange(t, readOnly, append([]string{
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"0"}}}`,
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+	}, calls...)...)
+}
+
+// exchange drives the real stdio server: it writes the JSON-RPC lines as they
+// are, with no handshake added, and collects the response to each id.
+func exchange(t *testing.T, readOnly string, lines ...string) map[float64]map[string]any {
 	t.Helper()
 	app := fakeapp.Start(t, func(r fakeapp.Request) fakeapp.Reply {
 		if r.Cmd == "status" {
@@ -34,10 +44,6 @@ func session(t *testing.T, readOnly string, calls ...string) map[float64]map[str
 	var stdout strings.Builder
 	go func() { done <- run(ctx, nil, inR, outW, &stderr); outW.Close() }()
 
-	lines := append([]string{
-		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"0"}}}`,
-		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
-	}, calls...)
 	go func() {
 		for _, l := range lines {
 			io.WriteString(inW, l+"\n")
