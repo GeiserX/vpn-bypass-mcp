@@ -4,6 +4,10 @@ on:
   push:
     tags: ["v*.*.*"]
 
+# Every job asks for what it needs; nothing gets write access by default.
+permissions:
+  contents: read
+
 jobs:
   check-version:
     # Runs before anything publishes: the tag, package.json and server.json must
@@ -13,7 +17,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Tag matches package.json and server.json
@@ -36,10 +40,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v7
+          # GoReleaser publishes with the GITHUB_TOKEN env below; no token
+          # stays in .git/config while it and the signing secrets are loaded.
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       # .goreleaser.yaml skips signing when the secrets are absent, which is
@@ -60,10 +67,12 @@ jobs:
             fi
           done
           exit "$missing"
-      - uses: goreleaser/goreleaser-action@v7
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser
-          version: "~> v2"
+          # An exact version: this job holds the signing identity, so it never
+          # runs a GoReleaser release that came out after this line was written.
+          version: v2.19.0
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -72,6 +81,14 @@ jobs:
           MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
           MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+      # The npm job ships these hashes inside the package, so postinstall.js
+      # never trusts a checksums file fetched from the (mutable) release page.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: checksums
+          path: dist/checksums.txt
+          if-no-files-found: error
+          retention-days: 7
 
   npm-publish:
     needs: goreleaser
@@ -81,8 +98,22 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: checksums
+          path: .
+      - name: The package carries the hashes of both archives
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          for arch in amd64 arm64; do
+            grep -Eq "^[0-9a-f]{64}  vpn-bypass-mcp_${v}_darwin_${arch}\.tar\.gz$" checksums.txt \
+              || { echo "::error::checksums.txt has no line for vpn-bypass-mcp_${v}_darwin_${arch}.tar.gz"; exit 1; }
+          done
+          npm pack --dry-run --json | jq -e '[.[0].files[].path] | index("checksums.txt")'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           # Trusted publishing needs npm 11.5.1+ and Node 22.14+; Node 24 ships both.
           node-version: '24'

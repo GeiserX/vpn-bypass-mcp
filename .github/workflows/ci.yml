@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     strategy:
@@ -18,32 +22,50 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - name: gofmt
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
       - run: go test -race ./...
+      # The npm wrapper's download and checksum code (postinstall.js, run.js).
+      - name: node tests
+        run: node --test postinstall.test.js
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      # The release binaries are darwin only, so check the darwin build.
+      - name: govulncheck
+        env:
+          GOOS: darwin
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
   build:
     # Builds the release archives from .goreleaser.yaml without publishing, so
     # a broken release config goes red here instead of on the tag.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - uses: goreleaser/goreleaser-action@v7
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser
-          version: "~> v2"
+          version: v2.19.0
           args: release --snapshot --clean --skip=publish
       - name: Archives postinstall.js downloads
         run: |
@@ -53,7 +75,11 @@ jobs:
             tar -tzf "$f" | grep -qx vpn-bypass-mcp
             grep -q "$(basename "$f")" dist/checksums.txt
           done
+      # release.yml puts GoReleaser's checksums.txt into the npm package; the
+      # package must carry it, or postinstall.js refuses to download.
       - name: npm package contents
-        run: npm pack --dry-run
+        run: |
+          cp dist/checksums.txt checksums.txt
+          npm pack --dry-run --json | jq -e '[.[0].files[].path] | index("checksums.txt") and index("run.js") and index("postinstall.js")'
       - name: Wait-for-npm script
         run: .github/scripts/wait-for-npm_test.sh
