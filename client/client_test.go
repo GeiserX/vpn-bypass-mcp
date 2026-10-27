@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -252,5 +253,24 @@ func TestErrorsNameTheSocketByFileNameOnly(t *testing.T) {
 		if strings.Contains(err.Error(), dir) || !strings.Contains(err.Error(), "control.sock") {
 			t.Errorf("error %q must name control.sock and not its folder", err)
 		}
+	}
+}
+
+// A read or write that fails after connecting carries a *net.OpError too; its
+// address must not reach the message either.
+func TestWithoutAddrDropsTheSocketPath(t *testing.T) {
+	path := "/Users/someone/Library/Application Support/VPNBypass/control.sock"
+	for _, op := range []string{"dial", "write", "read"} {
+		err := &net.OpError{Op: op, Net: "unix", Addr: &net.UnixAddr{Name: path, Net: "unix"}, Err: syscall.EPIPE}
+		if !strings.Contains(err.Error(), path) {
+			t.Fatalf("control: %q should hold the path", err)
+		}
+		if got := withoutAddr(err).Error(); strings.Contains(got, "someone") || got != syscall.EPIPE.Error() {
+			t.Errorf("%s: withoutAddr = %q", op, got)
+		}
+	}
+	plain := errors.New("x")
+	if withoutAddr(plain) != plain {
+		t.Error("an error that is not a net.OpError must pass through")
 	}
 }

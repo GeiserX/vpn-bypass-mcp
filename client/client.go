@@ -165,12 +165,7 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		// net.OpError prints the full address; keep only the cause.
-		var oe *net.OpError
-		if errors.As(err, &oe) && oe.Err != nil {
-			err = oe.Err
-		}
-		return nil, fmt.Errorf("connect to the VPN Bypass control socket %s: %w", sockName, err)
+		return nil, fmt.Errorf("connect to the VPN Bypass control socket %s: %w", sockName, withoutAddr(err))
 	}
 	defer conn.Close()
 
@@ -193,7 +188,7 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 	}
 
 	if _, err := conn.Write(append(line, '\n')); err != nil {
-		return nil, fail(fmt.Errorf("send %s to VPN Bypass: %w", cmd, err))
+		return nil, fail(fmt.Errorf("send %s to VPN Bypass: %w", cmd, withoutAddr(err)))
 	}
 
 	reply, err := bufio.NewReader(io.LimitReader(conn, maxResponseLine+1)).ReadBytes('\n')
@@ -204,7 +199,7 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 		case errors.Is(err, io.EOF):
 			return nil, fmt.Errorf("VPN Bypass closed the connection without a complete answer to %s", cmd)
 		default:
-			return nil, fail(fmt.Errorf("read the answer to %s: %w", cmd, err))
+			return nil, fail(fmt.Errorf("read the answer to %s: %w", cmd, withoutAddr(err)))
 		}
 	}
 
@@ -219,4 +214,16 @@ func (c *Client) Call(ctx context.Context, cmd string, args, secrets map[string]
 		return nil, resp.Error
 	}
 	return resp.Result, nil
+}
+
+// withoutAddr drops the socket address a *net.OpError prints ("dial unix
+// /Users/<name>/Library/...: connect: permission denied"), keeping its cause,
+// because the message reaches the model. A timeout stays recognisable: the
+// cause is os.ErrDeadlineExceeded, which is a net.Error with Timeout() true.
+func withoutAddr(err error) error {
+	var oe *net.OpError
+	if errors.As(err, &oe) && oe.Err != nil {
+		return oe.Err
+	}
+	return err
 }
