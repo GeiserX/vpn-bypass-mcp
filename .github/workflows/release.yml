@@ -49,6 +49,9 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          # No shared module cache in the job that holds the signing identity:
+          # a cache written by another workflow run could plant code here.
+          cache: false
       # .goreleaser.yaml skips signing when the secrets are absent, which is
       # right for snapshots and wrong for a release: stop here instead.
       - name: Require the macOS signing secrets

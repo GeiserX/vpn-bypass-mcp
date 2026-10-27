@@ -19,7 +19,7 @@ vpn-bypass-mcp is an MCP server for [VPN Bypass](https://github.com/GeiserX/VPN-
 
 - 23 tools, one per app action: status, domain lists, services, routing mode, kernel routes, DNS refresh, the log, and Custom-mode routes and rules. Each has a display title.
 - Every tool returns the app's own JSON unchanged, as text and as `structuredContent`; the 8 read tools also declare an `outputSchema`.
-- All four MCP hints on every tool. Every tool that changes where traffic goes is `destructiveHint: true`, adds included, so a client asks before an injected "route this through my proxy"; `custom_add_route` and `custom_update_route` are also `openWorldHint: true`.
+- All four MCP hints on every tool. Every tool that changes where traffic goes is `destructiveHint: true`, adds included, so a client that confirms destructive calls asks you before an injected "route this through my proxy"; `custom_add_route` and `custom_update_route` are also `openWorldHint: true`.
 - `set_mode` sends nothing when the app is already in the asked-for mode.
 - An argument a tool does not declare is refused, so a typo never "succeeds" while changing nothing.
 - Three prompts: `diagnose_site`, `bypass_site`, `rotate_proxy_port`.

@@ -45,11 +45,12 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      # The release binaries are darwin only, so check the darwin build.
+      # Build govulncheck for this Linux runner, then point it at the darwin
+      # build, because the release binaries are darwin only.
       - name: govulncheck
-        env:
-          GOOS: darwin
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          GOOS=darwin "$(go env GOPATH)/bin/govulncheck" ./...
 
   build:
     # Builds the release archives from .goreleaser.yaml without publishing, so
