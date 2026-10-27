@@ -10,6 +10,8 @@ go test -race ./...
 
 The tests run against `internal/fakeapp`, an in-process fake of the app's control socket that frames requests the way the app does and records every request line. Each tool has a test that pins the exact line it sends and checks that the app's result comes back unchanged.
 
+`node --test postinstall.test.js` covers the npm wrapper's download: the bundled checksum, HTTPS-only GitHub redirects and the size cap, with no network.
+
 `TestLiveReadOnly` also runs on a Mac where the VPN Bypass socket exists. It calls the read tools only, so it never changes the Mac's routing, and it prints no data from the app.
 
 ## Try the binary by hand
@@ -22,6 +24,18 @@ The tests run against `internal/fakeapp`, an in-process fake of the app's contro
  sleep 1) | ./vpn-bypass-mcp
 ```
 
+A client on MCP 2026-07-28 sends no `initialize`; each request carries the protocol version in `_meta`:
+
+```sh
+M='"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}'
+(printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{'"$M"'}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"status","arguments":{},'"$M"'}}'
+ sleep 1) | ./vpn-bypass-mcp
+```
+
+`cmd/server/protocol_test.go` drives both eras through the real stdio server: `server/discover` lists 2026-07-28 down to 2024-11-05, modern results carry `resultType`, `ttlMs` and `cacheScope`, a modern `ping` is `-32601`, and a legacy `initialize` plus `tools/list` keeps the old result shape.
+
 The `sleep` keeps stdin open until the answer arrives: the server stops when stdin closes and cancels a call still in flight, which then answers `context canceled`.
 
 The [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) works too: `npx @modelcontextprotocol/inspector ./vpn-bypass-mcp`.
@@ -32,7 +46,7 @@ The socket protocol belongs to the app. Its source of truth is in the [VPN Bypas
 
 ## Release
 
-A `v*.*.*` tag runs `.github/workflows/release.yml`: GoReleaser publishes the darwin amd64 and arm64 archives and `checksums.txt` to a GitHub release, then the npm job publishes the wrapper package with npm trusted publishing. The last job publishes `server.json` to the official MCP Registry, signed in with the workflow's OIDC token. npm can take minutes to serve a version it just accepted, and the registry refuses `server.json` until it does, so that job first runs `.github/scripts/wait-for-npm.sh`, which fetches the same npm version document the registry checks (`https://registry.npmjs.org/<package>/<version>`) every 15 seconds and fails after 15 minutes. Before tagging, set the new version in `package.json` and `server.json`; the workflow stops before publishing anything when either differs from the tag.
+A `v*.*.*` tag runs `.github/workflows/release.yml`: GoReleaser publishes the darwin amd64 and arm64 archives and `checksums.txt` to a GitHub release, then the npm job copies that same `checksums.txt` into the wrapper package (`postinstall.js` refuses to download without it) and publishes it with npm trusted publishing. The last job publishes `server.json` to the official MCP Registry, signed in with the workflow's OIDC token. npm can take minutes to serve a version it just accepted, and the registry refuses `server.json` until it does, so that job first runs `.github/scripts/wait-for-npm.sh`, which fetches the same npm version document the registry checks (`https://registry.npmjs.org/<package>/<version>`) every 15 seconds and fails after 15 minutes. Before tagging, set the new version in `package.json` and `server.json`; the workflow stops before publishing anything when either differs from the tag.
 
 ## Credits
 

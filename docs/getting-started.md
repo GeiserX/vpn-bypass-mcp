@@ -13,7 +13,7 @@
 npx -y vpn-bypass-mcp --version
 ```
 
-The package downloads the release binary for your Mac (Intel or Apple silicon), checks it against the release's `checksums.txt`, and runs it. MCP clients start it the same way, without `--version`:
+The package downloads the release binary for your Mac (Intel or Apple silicon), checks it against the `checksums.txt` shipped inside the npm package, and runs it. When your package manager skips install scripts (npm 12, pnpm and bun do by default), the download happens on the first start instead, with the same checks. MCP clients start it the same way, without `--version`:
 
 ```json
 {
@@ -29,7 +29,25 @@ The package downloads the release binary for your Mac (Intel or Apple silicon), 
 That block goes into Claude Desktop's `claude_desktop_config.json`, Cursor's `.cursor/mcp.json`, or any client that reads the `mcpServers` format. For Claude Code:
 
 ```sh
-claude mcp add vpn-bypass -- npx -y vpn-bypass-mcp
+claude mcp add --transport stdio vpn-bypass -- npx -y vpn-bypass-mcp
+```
+
+VS Code reads `.vscode/mcp.json` with a `servers` key:
+
+```json
+{
+  "servers": {
+    "vpn-bypass": { "type": "stdio", "command": "npx", "args": ["-y", "vpn-bypass-mcp"] }
+  }
+}
+```
+
+Codex reads `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.vpn-bypass]
+command = "npx"
+args = ["-y", "vpn-bypass-mcp"]
 ```
 
 ## Release binary
@@ -46,7 +64,7 @@ Point your client's `command` at the full path of the binary, with no `args`.
 
 ## From source
 
-With Go 1.27 or later:
+With Go 1.27.3 or later:
 
 ```sh
 git clone https://github.com/GeiserX/vpn-bypass-mcp

@@ -10,6 +10,9 @@ The app owns the contract. Its source of truth is in the VPN-Bypass repo: `Sourc
 - A proxy password travels in `secrets.pass` only. It never appears in a result, an error message or a log line.
 - The result stays raw JSON (`json.RawMessage`), so a field the app adds later reaches the agent with no change here.
 - Read verbs are listed in `client.IsMutating`; every other verb counts as mutating, the same default the app uses. A new read verb goes into that list and into the tool's `ReadOnly` flag, or read-only mode hides it.
+- `set_mode` sends `status` first and sends `mode` only when the app is in another mode (`sameMode` in `internal/tools/status.go`), matching what the app itself does from 4.9.0.
+- A tool that changes where traffic goes is `destructiveHint: true`, adds included; only `refresh_dns` is a non-destructive write. `TestDestructiveTools` pins the list. A tool whose arguments name an outside host (a proxy) is also `openWorldHint: true`.
+- Tool results are the app's JSON as text and as `structuredContent`. An argument a tool does not declare is refused before anything is sent.
 - The domain, service, `routes.active`, `routes.clear`, `refresh`, `dns.refresh` and `logs` verbs exist from VPN Bypass 4.9.0. Older apps answer `unknown_command`, which `internal/tools/tools.go` turns into the 4.9.0 message.
 
 ## Two meanings of "route"
