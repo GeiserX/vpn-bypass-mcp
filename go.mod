@@ -3,7 +3,7 @@ module github.com/geiserx/vpn-bypass-mcp
 go 1.27.3
 
 require (
-	github.com/mark3labs/mcp-go v1.4.0
+	github.com/mark3labs/mcp-go v1.5.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 )
 
