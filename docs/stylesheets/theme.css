@@ -59,7 +59,20 @@
  *   - the title of the navigation drawer on a narrow screen
  *     (label[for=__drawer]), where the name is a bare text node and only two
  *     pseudo-elements exist: there "MCP" follows "Bypass" as plain text.
- * Both sit on --md-primary-fg-color (#0b1220) in both schemes. */
+ * Zensical's header and drawer take the page background: #0b1220 on the dark
+ * scheme, white on the light one. The banner colours (white "VPN", sky
+ * "Bypass") stay on the dark scheme only; on white, "VPN" takes the text
+ * colour and the sky words take #0369a1, the light scheme's link colour. */
+[data-md-color-scheme="default"] {
+  --vbm-wordmark-strong: var(--md-default-fg-color);
+  --vbm-wordmark-sky: #0369a1;
+}
+
+[data-md-color-scheme="slate"] {
+  --vbm-wordmark-strong: #ffffff;
+  --vbm-wordmark-sky: #38bdf8;
+}
+
 .md-header__topic:first-child .md-ellipsis,
 .md-nav--primary > .md-nav__title[for="__drawer"] {
   --vbm-wordmark-size: 0.9rem;
@@ -83,14 +96,14 @@
 .md-nav--primary > .md-nav__title[for="__drawer"]::before {
   content: "VPN";
   content: "VPN" / "";
-  color: #ffffff;
+  color: var(--vbm-wordmark-strong);
   font-weight: 800;
 }
 
 .md-header__topic:first-child .md-ellipsis::after {
   content: "Bypass";
   content: "Bypass" / "";
-  color: #38bdf8;
+  color: var(--vbm-wordmark-sky);
   font-weight: 200;
   /* The banner gap: 18 px at a cap height of 54 px, about 0.06em. */
   margin-left: 0.06em;
@@ -99,7 +112,7 @@
 .md-nav--primary > .md-nav__title[for="__drawer"]::after {
   content: "Bypass MCP";
   content: "Bypass MCP" / "";
-  color: #38bdf8;
+  color: var(--vbm-wordmark-sky);
   font-weight: 200;
   margin-left: 0.06em;
 }
@@ -111,9 +124,9 @@
   align-self: center;
   margin-left: 0.35rem;
   padding: 0 0.25rem;
-  border: 0.08rem solid #38bdf8;
+  border: 0.08rem solid var(--vbm-wordmark-sky);
   border-radius: 0.25rem;
-  color: #38bdf8;
+  color: var(--vbm-wordmark-sky);
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   font-size: 0.6rem;
   font-weight: 700;
