@@ -64,7 +64,7 @@ Point your client's `command` at the full path of the binary, with no `args`.
 
 ## From source
 
-With Go 1.27.3 or later:
+With Go 1.27.4 or later:
 
 ```sh
 git clone https://github.com/GeiserX/vpn-bypass-mcp
