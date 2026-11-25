@@ -5,7 +5,7 @@ go 1.27.3
 toolchain go1.27.4
 
 require (
-	github.com/mark3labs/mcp-go v1.5.0
+	github.com/mark3labs/mcp-go v1.6.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 )
 
